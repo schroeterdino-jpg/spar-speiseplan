@@ -103,3 +103,54 @@ function buildRecipe(data, url){
   return {id:'own_' + slug(url).slice(-24) + '_' + (Date.now() % 100000), n:data.name || 'Eigenes Rezept', ok:['herd', 'ofen', 'heissluft', 'mikrowelle'], min:data.minutes || 30,
     img:data.image || '', tags:[], z:zl, s:data.steps.length ? data.steps : ['Zubereitung auf der Originalseite ansehen.'], defs, raw, yield:yieldN, url, source:data.source || '', own:true};
 }
+
+/* Chefkoch-Rezept (Antwort der Schnittstelle) -> kompakter Datensatz. strict = Auswahl fürs Sammeln der Datenbank. */
+const CK_BAD = /kuchen|torte|plätzchen|plaetzchen|gebäck|cookie|muffin|cupcake|likör|liqueur|cocktail|bowle|marmelade|konfitüre|gelee|\beis\b|eiscreme|pudding|creme brulee|dessert|nachtisch|keks|brownie|waffel|plunder|strudel süß|glühwein|punsch|smoothie|shake|limonade|sirup|bonbon|schokolade|praline|marzipan|lebkuchen|stollen|hefezopf|brötchen backen|brot backen|sauerteig|torte|tarte|mousse|parfait|kompott|aufstrich süß/i;
+const CK_MEAT = /fleisch|hack|schinken|speck|wurst|haehnchen|huhn|huehner|pute|rind|schwein|lamm|salami|gulasch|bacon|kasseler|\bente|gans\b|leber|schnitzel|steak|gyros|kebab|doener|mett|chorizo|pancetta|lyoner|bratwurst|geschnetzelt|keule|brustfilet|filet\b/;
+const CK_FISH = /fisch|lachs|thunfisch|forelle|garnele|shrimp|scampi|krabbe|muschel|tintenfisch|calamari|hering|kabeljau|seelachs|matjes|sardelle|anchovi|surimi|dorade|zander|scholle|pangasius|meeresfruechte|lachs/;
+const CK_DAIRY = /(?<!kokos)(?<!hafer)(?<!soja)(?<!mandel)milch|sahne|kaese|joghurt|jogurt|quark|butter(?!nuss)|schmand|creme fraiche|mozzarella|parmesan|feta|mascarpone|ricotta|halloumi|gouda|emmentaler|gorgonzola|cheddar|frischkaese|buttermilch|skyr|ghee|raclette|schafskaese|hirtenkaese|cremefine|kefir/;
+const CK_EGG = /\beier\b|\bei\b|\beigelb|eiweiss|\beier\)|vollei/;
+const CK_GLUTEN = /mehl|nudel|pasta|spaghetti|penne|brot\b|broetchen|toast|weizen|couscous|bulgur|paniermehl|semmel|tortilla|lasagne|gnocchi|blaetterteig|hefeteig|pizzateig|knoedel|panade|dinkel|gerste|roggen|maultasche|sojasauce|sojasosse|fusilli|tagliatelle|makkaroni|rigatoni|farfalle|spaetzle|schupfnudel|baguette|ciabatta|burger|wrap|paniert|semmelbroesel|griess|seitan|flammkuchen|teig/;
+const fmtNum = n => (Math.round(n * 100) / 100).toString().replace('.', ',');
+function lineOf(i){
+  let q = '';
+  if (typeof i.amount === 'number' && i.amount > 0) q = fmtNum(i.amount) + ' ';
+  return (q + (i.unit ? String(i.unit).replace(/\((?:n|e|s|en)\)/g, '') + ' ' : '') + (i.name || '')).trim();
+}
+function chefkochToRec(d, strict){
+  if (!d || !d.id || !d.title || (strict && CK_BAD.test(d.title))) return null;
+  const groups = d.ingredientGroups || [];
+  const lines = [];
+  groups.forEach(g => (g.ingredients || []).forEach(i => { const l = lineOf(i); if (l) lines.push(l); }));
+  if (lines.length < (strict ? 3 : 2) || lines.length > (strict ? 25 : 60)) return null;
+  const steps = String(d.instructions || '').split(/\n+/).map(s => s.trim()).filter(s => s.length > 3);
+  if (!steps.length) return null;
+  const tpl = d.previewImageUrlTemplate || '';
+  if (!/chefkoch-cdn\.de/.test(tpl)) { if (strict) return null; }
+  const mins = d.totalTime || ((d.preparationTime || 0) + (d.cookingTime || 0) + (d.restingTime || 0)) || d.preparationTime || 30;
+  if (strict && mins > 120) return null;
+  const yieldN = Math.max(1, Math.round(d.servings || 4));
+  let rec;
+  try { rec = buildRecipe({name: d.title, ingredients: lines, steps, minutes: mins, yield: yieldN, image: '', source: 'Chefkoch'}, 'https://www.chefkoch.de/rezepte/' + d.id + '/'); } catch (e) { return null; }
+  const txt = norm(lines.join(' | ').replace(/kokos\w*milch|hafermilch|sojamilch|mandelmilch/gi, ' ') + ' ' + d.title);
+  const fl = (CK_MEAT.test(txt) ? 'm' : '') + (CK_FISH.test(txt) ? 'f' : '') + (CK_DAIRY.test(txt) ? 'd' : '') + (CK_EGG.test(txt) ? 'e' : '') + (CK_GLUTEN.test(txt) ? 'g' : '');
+  rec.z = rec.z.map(([k, a]) => { const u = ING[k] ? ING[k].u : 'Stück'; const cap = (u === 'g' || u === 'ml') ? 600 : 4; return [k, Math.min(cap, a)]; });
+  const MAIN = new Set(['rind','schwein','tofu','garnelen','matjes','haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','bohnen','couscous','lasagne','pizzateig','suessk']);
+  const mainText = /fleisch|filet|steak|schnitzel|kotelett|geschnetzelt|braten|gulasch|tofu|garnele|forelle|kabeljau|reis|nudel|kartoffel|bohne|linse|kichererbse|kuerbis|blumenkohl|aubergine|knoedel|spaetzle|gnocchi|rouladen|bulgur|quinoa|haehnchen|huhn|pute|ente|leber|fisch/;
+  const mappedMain = rec.z.some(([k]) => MAIN.has(k)) || mainText.test(norm(lines.join(' ')));
+  if (strict && (!mappedMain || rec.z.length < 4)) return null;
+  if (strict && /salat|corn ?dog|hot ?dog|snack|fingerfood|häppchen|haeppchen|canap|cracker|chips|popcorn|pommes|wrap|sandwich|toast|bruschetta|crostini|dip\b|nuggets|pfannkuchen|crepe|crêpe|eierkuchen|müsli|muesli|porridge|smoothie|brotzeit|vorspeise|beilage/i.test(d.title)) return null;
+  if (strict && rec.z.some(([k]) => k === 'salat')) return null;
+  if (strict && /soße|sosse|sauce|dip\b|dressing|fladen|pommes|aufstrich|beilage|marinade|gewürz|würz|paste\b|pesto|brühe|fond\b|vinaigrette|chutney|ketchup|mayonnaise|remoulade|sirup|gewürzmischung|kräuterbutter|butter\b|teig\b|chapati|naan|\bbrot\b|brötchen|zopf/i.test(d.title)) return null;
+  const cn = {};
+  for (const k in rec.defs) cn[k] = rec.defs[k].name;
+  const t = [], nt = norm(d.title + ' ' + lines.join(' '));
+  if (/pasta|nudel|spaghetti|oliven|feta|mozzarella|pesto|risotto|ofengemuese|griech|italien|zucchini|aubergine/.test(nt)) t.push('mediterran');
+  if (/curry|wok|kokos|sojasauce|sojasosse|thai|asia|china|ingwer|reisnudel|teriyaki|sushi/.test(nt)) t.push('asiatisch');
+  if (!/m|f/.test(fl) || /bohne|linsen|kichererbse|tofu/.test(nt)) { /* vegetarisch ist über die Ernährungsform abgedeckt */ }
+  if (/hahn|huhn|pute|lachs|thunfisch|ei\b|eier|linsen|kichererbse|bohne|quark|tofu|haehnchen/.test(nt)) t.push('protein');
+  if (/salat|gemuese|suppe|linsen|bohne|brokkoli|spinat|kohl/.test(nt)) t.push('ballast');
+  if (mins <= 25) t.push('schnell');
+  if (mins <= 50 && /nudel|spaghetti|auflauf|kartoffel|schnitzel|frikadelle|hack|haehnchen|huhn|reis|suppe|eintopf|pizza|lasagne|gulasch|knoedel|pueree|spaetzle|bolognese|lauch|gemuese/.test(norm(d.title)) && !/curry|thai|sushi|wok|ramen|asia|indisch|mexik|tex mex/.test(norm(d.title))) t.push('familie');
+  return {i: d.id, n: d.title.slice(0, 80), m: mins, im: tpl.replace(/^.*?\/rezepte\//, ''), y: yieldN, z: rec.z, s: steps, cn, rw: lines, fl, t};
+}

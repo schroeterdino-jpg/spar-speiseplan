@@ -32,6 +32,8 @@ let SAVED = LS.get('sp-saved', []);
 let OWN = LS.get('sp-eigene', []);
 let HAVE = LS.get('sp-have', []);
 let FAV = LS.get('sp-fav', []);
+let LIVE = LS.get('sp-live', []);
+const API_BASE = /vercel\.app$/.test(location.hostname) ? '' : 'https://spar-speiseplan.vercel.app';
 function addOwn(r){
   if (R[r.id]) return;
   for (const k in (r.defs || {})) ING[k] = r.defs[k];
@@ -41,13 +43,13 @@ function addOwn(r){
 OWN.forEach(addOwn);
 /* Rezept-Datenbank (rezepte.json, von Chefkoch geholt) */
 const DBDEV = ['herd', 'ofen', 'heissluft', 'mikrowelle'];
-function addDB(list){
+function addDB(list, live){
   (list || []).forEach(d => {
     const id = 'db_' + d.i;
     if (R[id]) return;
     for (const k in (d.cn || {})) if (!ING[k]) ING[k] = {name:d.cn[k], u:'Stück', pack:1, lbl:'nach Bedarf', area:'Sonstiges', e:'🛒', p:[1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2], custom:true};
     const r = {id, n:d.n, ok:DBDEV, min:d.m, img:'https://img.chefkoch-cdn.de/rezepte/' + d.im.replace('<format>', 'crop-960x540'), tags:d.t || [], z:d.z, s:d.s, raw:d.rw, yield:d.y,
-      url:'https://www.chefkoch.de/rezepte/' + d.i + '/', source:'Chefkoch', own:true, db:true, fl:d.fl || '', rawn:norm(d.rw.join(' '))};
+      url:'https://www.chefkoch.de/rezepte/' + d.i + '/', source:'Chefkoch', own:true, db:true, live:!!live, fl:d.fl || '', rawn:norm(d.rw.join(' '))};
     r.emo = ING[r.z[0][0]].e;
     RECIPES.push(r); R[id] = r;
   });
@@ -104,7 +106,7 @@ function allowed(r){
   if (S.lactose && dairy) return false;
   return true;
 }
-const eligible = () => RECIPES.filter(allowed);
+const eligible = () => RECIPES.filter(r => allowed(r) && (!r.live || FAV.includes(r.id)));
 const wishScore = r => r.tags.filter(t => S.wishes.includes(t)).length;
 
 /* ---------- Plan erzeugen ---------- */
@@ -375,7 +377,7 @@ function recipeView(i, rid){
   const devs = r.ok.map(d => DEVS.find(x => x.id === d).n).join(' oder ');
   return '<div class="scr rec"><div class="hero">' + ph(r.id, 'large', 'big') +
     '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="' + (rid ? 'fav' : 'pin') + '" data-i="' + i + '" data-id="' + r.id + '" aria-label="' + (rid ? 'Favorit' : 'Anheften') + '">' + (rid ? (FAV.includes(r.id) ? '♥' : '♡') : (s.pin ? '🔒' : '🔓')) + '</button></div>' +
-    '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' +
+    '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' + (rid && !allowed(r) ? '<p class="note warn">Achtung: Dieses Rezept passt nicht ganz zu deinen Einstellungen (Ernährung, Allergien, blockierte Zutaten oder Geräte).</p>' : '') +
     '<div class="chips">' + (rid ? '' : '<span class="chip">' + mealLabel(i) + '</span>') + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
     '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '' + (rid ? '' : '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button><button class="btn ghost fv" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>') + '' +
@@ -424,9 +426,36 @@ function resList(q){
   const head = t.length ? '<p class="note">' + total + ' Rezepte' + (total > 40 ? ', die ersten 40' : '') + '</p>' : '<p class="note">' + (FAV.length ? 'Deine Favoriten' : 'Zufällige Ideen. Suche oben nach Zutat oder Gericht.') + '</p>';
   return head + list.map(r => '<div class="rr" data-act="orec" data-id="' + r.id + '" role="button" tabindex="0">' + ph(r.id, 'medium', 'sq') + '<div><h3>' + esc(r.n) + '</h3><p>⏱ ' + r.min + ' Min. · ca. ' + eur(portionCost(r) / S.persons) + ' pro Portion</p></div><button type="button" class="hb" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>').join('');
 }
+let liveRes = null, liveState = '', liveTimer = null, liveQ = '';
+const ckImg = tpl => tpl ? tpl.replace(/^.*?\/rezepte\//, 'https://img.chefkoch-cdn.de/rezepte/').replace('<format>', 'crop-960x540') : '';
+function paintRes(){ const q = $('#rq'), el = $('#rres'); if (el) el.innerHTML = resHTML(q ? q.value : ''); }
+function runLive(q){
+  clearTimeout(liveTimer); q = q.trim(); liveQ = q;
+  if (q.length < 2) { liveRes = null; liveState = ''; paintRes(); return; }
+  liveTimer = setTimeout(() => {
+    liveState = 'laden'; paintRes();
+    fetch(API_BASE + '/api/chefkoch?q=' + encodeURIComponent(q)).then(r => r.json().then(j => { if (!r.ok) throw new Error(j.error || 'Fehler'); return j; }))
+      .then(j => { if (liveQ !== q) return; liveRes = j.results || []; liveState = 'ok'; paintRes(); })
+      .catch(e => { liveRes = null; liveState = 'fehler'; paintRes(); });
+  }, 500);
+}
+function resHTML(q){
+  if (q.trim().length < 2 || liveState === '') return resList(q);
+  if (liveState === 'laden') return '<p class="note ctr">Suche bei Chefkoch…</p>';
+  if (liveState === 'fehler') return '<p class="note warn">Keine Verbindung zu Chefkoch. Hier die gespeicherten Rezepte:</p>' + resList(q);
+  if (!liveRes.length) return '<p class="note ctr">Bei Chefkoch nichts gefunden.</p>';
+  return '<p class="note">Live bei Chefkoch. Ernährung und Allergien werden erst beim Öffnen geprüft.</p>' + liveRes.map(x => '<div class="rr" data-act="lrec" data-id="' + x.id + '" role="button" tabindex="0"><div class="ph">' +
+    (x.img ? '<img src="' + esc(ckImg(x.img)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</div><div><h3>' + esc(x.title) + '</h3><p>' + (x.min ? '⏱ ' + x.min + ' Min. · ' : '') + (x.rating ? '★ ' + x.rating.toFixed(1) + ' (' + x.votes + ')' : '') + '</p></div>' +
+    '<button type="button" class="hb" data-act="lfav" data-id="' + x.id + '" aria-label="Favorit">' + (FAV.includes('db_' + x.id) ? '♥' : '♡') + '</button></div>').join('');
+}
+function ensureLive(id){
+  if (R['db_' + id]) return Promise.resolve('db_' + id);
+  return fetch(API_BASE + '/api/chefkoch?id=' + encodeURIComponent(id)).then(r => r.json().then(j => { if (!r.ok) throw new Error(j.error || 'Fehler'); return j; }))
+    .then(d => { const rec = chefkochToRec(d, false); if (!rec) throw new Error('Rezept nicht lesbar'); LIVE.push(rec); LS.set('sp-live', LIVE.slice(-300)); addDB([rec], true); return 'db_' + id; });
+}
 function searchView(){
   return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Rezepte</div><span class="ib ghost"></span></header><main class="main"><h1 class="h1">Rezepte suchen</h1>' +
-    '<label class="search"><span aria-hidden="true">🔎</span><input id="rq" type="search" placeholder="z. B. Hähnchen, Suppe, Auflauf" autocomplete="off"></label><div id="rres">' + resList('') + '</div></main></div>';
+    '<label class="search"><span aria-hidden="true">🔎</span><input id="rq" type="search" placeholder="z. B. Hähnchen, Suppe, Auflauf" autocomplete="off"></label><div id="rres">' + resHTML($('#rq') ? $('#rq').value : '') + '</div></main></div>';
 }
 function savedView(){
   const list = SAVED.length ? SAVED.map(it => '<article class="svd"><div><h3>' + esc(it.name) + '</h3><p>' + STORES[it.snap.store] + ' · ' + it.snap.dset.length + (it.snap.dset.length === 1 ? ' Tag' : ' Tage') + ' · ' + it.snap.persons + ' Pers. · ' + eur(it.total) + '</p></div>' +
@@ -528,8 +557,10 @@ document.addEventListener('click', e => {
   }
   if (act === 'gesp') { go('#/gespeichert'); return; }
   if (act === 'suche') { go('#/suche'); return; }
+  if (act === 'lrec') { toast('Lade Rezept…'); ensureLive(el.dataset.id).then(id => go('#/r/' + id)).catch(e => toast('Das hat nicht geklappt: ' + e.message)); return; }
+  if (act === 'lfav') { ensureLive(el.dataset.id).then(id => { FAV = FAV.includes(id) ? FAV.filter(x => x !== id) : FAV.concat(id); LS.set('sp-fav', FAV); toast(FAV.includes(id) ? 'Als Favorit gemerkt' : 'Favorit entfernt'); paintRes(); }).catch(e => toast('Das hat nicht geklappt: ' + e.message)); return; }
   if (act === 'orec') { go('#/r/' + el.dataset.id); return; }
-  if (act === 'fav') { const id = el.dataset.id; FAV = FAV.includes(id) ? FAV.filter(x => x !== id) : FAV.concat(id); LS.set('sp-fav', FAV); toast(FAV.includes(id) ? 'Als Favorit gemerkt' : 'Favorit entfernt'); if (route()[0] === 'suche') { const q = $('#rq'); $('#rres').innerHTML = resList(q ? q.value : ''); } else render(true); return; }
+  if (act === 'fav') { const id = el.dataset.id; FAV = FAV.includes(id) ? FAV.filter(x => x !== id) : FAV.concat(id); LS.set('sp-fav', FAV); toast(FAV.includes(id) ? 'Als Favorit gemerkt' : 'Favorit entfernt'); if (route()[0] === 'suche') paintRes(); else render(true); return; }
   if (act === 'have') { if (!HAVE.includes(el.dataset.id)) HAVE.push(el.dataset.id); LS.set('sp-have', HAVE); toast('Steht nicht mehr auf der Liste'); render(true); return; }
   if (act === 'unhave') { HAVE = HAVE.filter(x => x !== el.dataset.id); LS.set('sp-have', HAVE); render(true); return; }
   if (act === 'gopen') { const it = SAVED.find(x => x.id === el.dataset.id); if (it) { Object.assign(S, it.snap); S.days = S.dset.length; P = JSON.parse(JSON.stringify(it.plan)); save(); go('#/plan'); } return; }
@@ -551,7 +582,8 @@ document.addEventListener('input', e => {
     if (t.id === 'bud') { const r = $('#rng'); if (r) r.value = Math.min(200, Math.max(10, v)); } else { const b = $('#bud'); if (b) b.value = v; }
     save();
   } else if (t.id === 'rq') {
-    $('#rres').innerHTML = resList(t.value);
+    if (t.value.trim().length < 2) { liveRes = null; liveState = ''; }
+    paintRes(); runLive(t.value);
   } else if (t.id === 'q') {
     $('#blk').innerHTML = blkGrid(t.value);
   }
@@ -577,6 +609,6 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Start ---------- */
 $('#app').innerHTML = '<div class="scr center"><p class="sub ctr">Rezepte werden geladen…</p></div>';
-const DBP = fetch('rezepte.json').then(r => r.ok ? r.json() : []).then(addDB).catch(() => 0);
+const DBP = fetch('rezepte.json').then(r => r.ok ? r.json() : []).then(l => { addDB(l); addDB(LIVE, true); }).catch(() => 0);
 Promise.race([DBP, new Promise(res => setTimeout(res, 15000))]).then(() => render(false));
 loadThumbs().then(got => { if (got) render(true); });
