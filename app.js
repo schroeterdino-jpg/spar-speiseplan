@@ -7,6 +7,8 @@ const eur = n => n.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
 const num = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const STORES = ['Aldi', 'Penny', 'Edeka', 'Lidl', 'Rewe', 'Netto', 'Kaufland', 'Norma'];
+const LOOSE_STORES = [2, 4, 6]; /* Edeka, Rewe, Kaufland: Gemüse oft lose. Bei Discountern gibt es meist nur Beutel. */
+const isLoose = i => LOOSE.has(i) && LOOSE_STORES.includes(S.store);
 /* Preise der neuen Läden: abgeleitet von Aldi/Penny/Edeka (Laden, Faktor) – grobe Schätzung, im Einkauf anpassbar */
 const PBASE = [[0,1],[1,1],[2,1],[0,1],[2,1.03],[1,0.98],[1,1.02],[0,1.02]];
 const LOGOS = ['Aldi','Penny','Edeka','Lidl','Netto','Norma'];
@@ -71,7 +73,7 @@ function shop(rids){
   for (const rid of rids) for (const [i, a] of R[rid].z) tot[i] = (tot[i] || 0) + a * S.persons;
   const rows = Object.keys(tot).map(i => {
     const g = ING[i], t = tot[i];
-    if (LOOSE.has(i)) { const w = Math.max(50, Math.ceil(t / 50 - 1e-9) * 50); return {i, t, w, loose: true, cost: w / g.pack * price(i)}; }
+    if (isLoose(i)) { const w = Math.max(50, Math.ceil(t / 50 - 1e-9) * 50); return {i, t, w, loose: true, cost: w / g.pack * price(i)}; }
     const packs = Math.max(1, Math.ceil(t / g.pack - 1e-9));
     return {i, t, packs, cost: packs * price(i)};
   });
@@ -388,7 +390,7 @@ function shopView(){
     }).join('') + '</section>';
   }).join('');
   const fold = '<details class="fold"><summary>Preise anpassen (' + STORES[S.store] + ')</summary><p class="note">Trage den Preis pro Packung ein, den du im Markt siehst.</p>' +
-    sh.rows.map(x => { const g = ING[x.i]; return '<div class="pr"><span>' + esc(g.name) + '<small>pro ' + packTxt(g) + (LOOSE.has(x.i) ? ' (lose)' : '') + '</small></span><input type="number" step="0.01" min="0" inputmode="decimal" data-price="' + x.i + '" value="' + price(x.i).toFixed(2) + '" aria-label="Preis ' + esc(g.name) + '"></div>'; }).join('') +
+    sh.rows.map(x => { const g = ING[x.i]; return '<div class="pr"><span>' + esc(g.name) + '<small>pro ' + packTxt(g) + (isLoose(x.i) ? ' (lose)' : '') + '</small></span><input type="number" step="0.01" min="0" inputmode="decimal" data-price="' + x.i + '" value="' + price(x.i).toFixed(2) + '" aria-label="Preis ' + esc(g.name) + '"></div>'; }).join('') +
     '<button class="btn ghost" data-act="resetprice">Meine Preise zurücksetzen</button></details>';
   return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Einkauf bei ' + STORES[S.store] + '</div><span class="ib ghost"></span></header>' +
     '<main class="main"><h1 class="h1">Einkaufsliste</h1><p class="sub">' + done + ' von ' + sh.rows.length + ' Artikeln gekauft</p>' + groups + fold + '</main>' +
