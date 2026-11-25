@@ -184,3 +184,6 @@ a{color:inherit}
 .wdays button{border:2px solid transparent;border-radius:16px;background:var(--card);box-shadow:0 1px 6px #0001;min-height:64px;display:grid;place-items:center;font-weight:700;font-size:17px;color:var(--ink);padding:0}
 .wdays button small{display:none}
 .wdays button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+
+.tile.store img{position:absolute;left:12%;right:12%;top:24%;width:76%;height:46%;object-fit:contain}
+.tile.store .sn{position:absolute;left:0;right:0;bottom:8px;font-size:13px;font-weight:600;color:var(--mute)}

@@ -9,6 +9,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const STORES = ['Aldi', 'Penny', 'Edeka', 'Lidl', 'Rewe', 'Netto', 'Kaufland', 'Norma'];
 /* Preise der neuen Läden: abgeleitet von Aldi/Penny/Edeka (Laden, Faktor) – grobe Schätzung, im Einkauf anpassbar */
 const PBASE = [[0,1],[1,1],[2,1],[0,1],[2,1.03],[1,0.98],[1,1.02],[0,1.02]];
+const LOGOS = ['Aldi','Penny','Edeka','Lidl','Netto','Norma'];
 const WD = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
 const STEPS = 8;
 const LS = {
@@ -212,7 +213,7 @@ function stepView(n){
   if (n === 0) {
     return shell(0, 'Wo kaufst du ein?', 'Die Preise passen wir an den Laden an.',
       '<div class="tiles3">' + STORES.map((s, i) =>
-        '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '"><span>' + s + '</span></button>').join('') + '</div>' +
+        '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '">' + (LOGOS.includes(s) ? '<img src="logos/' + s.toLowerCase() + '.png" alt="' + s + '"><span class="sn">' + s + '</span>' : '<span>' + s + '</span>') + '</button>').join('') + '</div>' +
       '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>');
   }
   if (n === 1) {
