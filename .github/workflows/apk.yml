@@ -17,7 +17,7 @@ jobs:
       - name: Web-Dateien vorbereiten
         run: |
           mkdir www
-          cp index.html app.js daten.js style.css www/
+          cp index.html app.js daten.js foods.js style.css www/
           cp -r logos www/logos
       - name: Android-Projekt erzeugen
         run: |

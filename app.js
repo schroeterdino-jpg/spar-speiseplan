@@ -19,6 +19,8 @@ const LS = {
 
 let S = Object.assign({store:0, budget:50, persons:2, days:3, dset:[0,1,2], meals:1, wishes:[], diet:null, gluten:false, lactose:false,
   dev:{herd:true, ofen:false, heissluft:false, mikrowelle:false}, blocked:[]}, LS.get('sp-settings', {}));
+S.blocked = (S.blocked || []).map(b => b[0] === 'f' ? b : ((FOODS.find(f => f.k.length === 1 && f.k[0] === b) || {id:b}).id));
+let blkCat = 'Beliebt';
 if (!Array.isArray(S.dset) || !S.dset.length) S.dset = [0,1,2];
 S.days = S.dset.length;
 let P = LS.get('sp-plan', null);
@@ -53,11 +55,13 @@ function shop(rids){
 const portionCost = r => r.z.reduce((s, [i, a]) => s + a * S.persons / ING[i].pack * price(i), 0);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+const blockedKeys = () => { const k = new Set(); S.blocked.forEach(id => { const f = FOODS.find(x => x.id === id); if (f) f.k.forEach(x => k.add(x)); }); return k; };
 /* ---------- Welche Rezepte passen ---------- */
 function allowed(r){
   const ids = r.z.map(x => x[0]);
   if (!r.ok.some(d => S.dev[d])) return false;
-  if (ids.some(i => S.blocked.includes(i))) return false;
+  const bk = blockedKeys();
+  if (ids.some(i => bk.has(i) || S.blocked.includes(i))) return false;
   const meat = ids.some(i => MEAT.has(i)), fish = ids.some(i => FISH.has(i));
   const dairy = ids.some(i => DAIRY.has(i)), egg = ids.includes('eier'), gl = ids.some(i => GLUTEN.has(i));
   if (S.diet === 'vegan' && (meat || fish || dairy || egg)) return false;
@@ -218,7 +222,7 @@ function stepView(n){
   }
   if (n === 1) {
     return shell(1, 'Wie hoch ist dein Budget?', 'Stelle den Betrag ein, den du gerne ausgeben möchtest.',
-      '<div class="budget"><div class="bigrow"><input id="bud" type="number" inputmode="numeric" min="10" max="500" value="' + S.budget + '" aria-label="Budget in Euro"><span class="eu">€</span></div>' +
+      '<div class="budget"><div class="bigrow"><input id="bud" type="number" inputmode="numeric" min="10" max="500" value="' + S.budget + '" style="width:' + (String(S.budget).length + 0.8) + 'ch" aria-label="Budget in Euro"><span class="eu">€</span></div>' +
       '<div class="cap">für deinen ganzen Plan</div>' +
       '<input id="rng" class="rng" type="range" min="10" max="200" step="1" value="' + Math.min(200, Math.max(10, S.budget)) + '" aria-label="Budget einstellen">' +
       '<div class="rl"><span>10 €</span><span>200 €</span></div></div>');
@@ -259,13 +263,15 @@ function stepView(n){
     '<div id="blk">' + blkGrid('') + '</div>', 'Plan erstellen');
 }
 function blkGrid(q){
-  q = q.trim().toLowerCase();
-  const ids = q ? Object.keys(ING).filter(i => ING[i].name.toLowerCase().includes(q)) : POPULAR;
-  if (!ids.length) return '<p class="note">Nichts gefunden. Probiere einen anderen Begriff.</p>';
-  return (q ? '' : '<h2 class="h2">Beliebt</h2>') + '<div class="ingrid">' + ids.map(i => {
-    const on = S.blocked.includes(i);
-    return '<button class="ing' + (on ? ' on' : '') + '" data-act="blk" data-id="' + i + '" aria-pressed="' + on + '"><span class="ie">' + ING[i].e + '</span><span>' + esc(ING[i].name.replace(/ \(.*\)/, '')) + '</span></button>';
-  }).join('') + '</div>';
+  q = (q || '').trim().toLowerCase();
+  const cats = '<div class="cats">' + FOODCATS.map(c => '<button class="cat' + (!q && blkCat === c ? ' on' : '') + '" data-act="bcat" data-v="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>';
+  let list = q ? FOODS.filter(f => f.n.toLowerCase().includes(q)) : (blkCat === 'Beliebt' ? FOODPOP.map(n => FOODS.find(f => f.n === n)).filter(Boolean) : FOODS.filter(f => f.c === blkCat));
+  const sel = S.blocked.length ? '<p class="note">' + S.blocked.length + ' Zutat' + (S.blocked.length === 1 ? '' : 'en') + ' blockiert</p>' : '';
+  if (!list.length) return cats + '<p class="note">Nichts gefunden. Probiere einen anderen Begriff.</p>' + sel;
+  return cats + '<div class="ingrid">' + list.map(f => {
+    const on = S.blocked.includes(f.id);
+    return '<button class="ing' + (on ? ' on' : '') + '" data-act="blk" data-id="' + f.id + '" aria-pressed="' + on + '"><span class="ie">' + f.e + '</span><span>' + esc(f.n) + '</span></button>';
+  }).join('') + '</div>' + sel;
 }
 
 /* ---------- Ansichten: Laden, Plan, Rezept, Einkauf ---------- */
@@ -415,8 +421,9 @@ document.addEventListener('click', e => {
   if (act === 'blk') {
     const id = el.dataset.id, k = S.blocked.indexOf(id);
     if (k >= 0) S.blocked.splice(k, 1); else S.blocked.push(id);
-    save(); el.classList.toggle('on'); el.setAttribute('aria-pressed', String(k < 0)); return;
+    save(); el.classList.toggle('on'); el.setAttribute('aria-pressed', String(k < 0)); const nt = document.querySelector('#blk > .note'); if (nt) nt.textContent = S.blocked.length + (S.blocked.length === 1 ? ' Zutat' : ' Zutaten') + ' blockiert'; return;
   }
+  if (act === 'bcat') { blkCat = el.dataset.v; const q = $('#q'); if (q) q.value = ''; $('#blk').innerHTML = blkGrid(''); return; }
   if (act === 'restart') { go('#/start/0'); return; }
   if (act === 'shop') { go('#/einkauf'); return; }
   if (act === 'open') { go('#/rezept/' + i); return; }
@@ -439,6 +446,7 @@ document.addEventListener('input', e => {
   if (t.id === 'bud' || t.id === 'rng') {
     const v = Math.max(0, parseFloat(String(t.value).replace(',', '.')) || 0);
     S.budget = v;
+    { const b = $('#bud'); if (b) b.style.width = (String(b.value).length + 0.8) + 'ch'; }
     if (t.id === 'bud') { const r = $('#rng'); if (r) r.value = Math.min(200, Math.max(10, v)); } else { const b = $('#bud'); if (b) b.value = v; }
     save();
   } else if (t.id === 'q') {

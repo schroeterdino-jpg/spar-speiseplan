@@ -54,7 +54,7 @@ a{color:inherit}
 /* Budget */
 .budget{text-align:center;padding-top:30px}
 .bigrow{display:flex;justify-content:center;align-items:baseline;gap:6px}
-.bigrow input{width:2.6ch;field-sizing:content;min-width:1.2ch;font-family:var(--serif);font-weight:700;font-size:72px;line-height:1;border:0;background:transparent;color:var(--ink);text-align:right;padding:0;-moz-appearance:textfield}
+.bigrow input{width:3.8ch;min-width:1.2ch;font-family:var(--serif);font-weight:700;font-size:72px;line-height:1;border:0;background:transparent;color:var(--ink);text-align:right;padding:0;-moz-appearance:textfield}
 .bigrow input::-webkit-outer-spin-button,.bigrow input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .eu{font-family:var(--serif);font-weight:700;font-size:56px}
 .rng{width:100%;margin:46px 0 6px;accent-color:var(--ink);height:28px}
@@ -187,3 +187,8 @@ a{color:inherit}
 
 .tile.store img{position:absolute;left:12%;right:12%;top:24%;width:76%;height:46%;object-fit:contain}
 .tile.store .sn{position:absolute;left:0;right:0;bottom:8px;font-size:13px;font-weight:600;color:var(--mute)}
+
+.cats{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;margin:0 -4px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:none;border:0;border-radius:999px;background:var(--soft);padding:10px 14px;font-weight:600;font-size:14px;color:var(--ink)}
+.cat.on{background:var(--btn);color:var(--btn-ink)}
