@@ -287,7 +287,7 @@ function mealCard(s, i){
   const wn = wt ? WISHES.find(w => w.id === wt).n : '';
   return '<article class="meal" data-act="open" data-i="' + i + '" tabindex="0">' + ph(r.id, 'medium', 'sm') +
     '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
-    '<div class="mm"><span>👤 ' + S.persons + '</span><span>' + eur(portionCost(r)) + '</span></div></div>' +
+    '<div class="mm"><span>👤 ' + S.persons + '</span><span>Anteil ca. ' + eur(portionCost(r)) + '</span></div></div>' +
     '<button class="pin' + (s.pin ? ' on' : '') + '" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="' + (s.pin ? 'Gericht lösen' : 'Gericht anheften') + '">' + (s.pin ? '🔒' : '🔓') + '</button></article>';
 }
 function planView(){
@@ -307,7 +307,7 @@ function planView(){
     '<button class="stat link" data-act="shop"><div class="k">ZUM ANZEIGEN TIPPEN ↗</div><div class="v2">Einkauf</div><div class="s">' + done + '/' + sh.rows.length + ' Artikel gekauft</div></button></div>' +
     (over ? '<p class="note warn">Dieser Plan ist ' + eur(total - S.budget) + ' zu teuer. Probiere weniger Tage, weniger Mahlzeiten oder ein höheres Budget.</p>' : '') +
     few +
-    '<p class="note ctr">Hefte Mahlzeiten an, die du liebst, und generiere den Rest neu.</p>' + days +
+    '<p class="note ctr">Hefte Mahlzeiten an, die du liebst, und generiere den Rest neu.</p><p class="note ctr">Beim Gericht steht nur der Anteil der Zutaten. Gezahlt wird im Laden die ganze Packung, der echte Betrag steht oben bei den Kosten und im Einkauf.</p>' + days +
     '<p class="credit">Preise sind Schätzungen für ganze Packungen. Fotos sind Symbolfotos von <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>.</p></main>' +
     '<div class="bar two"><button class="btn ghost" data-act="regen">↻ Alle neu generieren</button><button class="btn" data-act="saveplan">Plan speichern</button></div></div>';
 }
@@ -319,7 +319,7 @@ function recipeView(i){
     '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="Anheften">' + (s.pin ? '🔒' : '🔓') + '</button></div>' +
     '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' +
     '<div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
-    '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
+    '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button></div>' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
     '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u) + '</span></li>').join('') + '</ul>' +
