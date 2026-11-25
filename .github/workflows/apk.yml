@@ -19,6 +19,7 @@ jobs:
           mkdir www
           cp index.html app.js daten.js foods.js import.js style.css www/
           cp rezepte.json www/ || true
+          cp resources/icon.png www/icon.png
           cp -r logos www/logos
       - name: Android-Projekt erzeugen
         run: |
@@ -45,6 +46,11 @@ jobs:
         run: |
           mkdir -p ~/.android
           cp signing/debug.keystore ~/.android/debug.keystore
+      - name: App-Symbol einsetzen
+        run: |
+          cp -r resources/res/* android/app/src/main/res/
+          sed -i 's#>\#[0-9A-Fa-f]*<#>\#E8553D<#' android/app/src/main/res/values/ic_launcher_background.xml
+          cat android/app/src/main/res/values/ic_launcher_background.xml
       - name: Schlüssel fest in Gradle eintragen
         run: |
           cat >> android/app/build.gradle <<'EOF'
