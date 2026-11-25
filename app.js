@@ -333,7 +333,7 @@ function mealCard(s, i, d){
   const wt = r.tags.find(t => S.wishes.includes(t)) || r.tags[0];
   const wn = wt ? WISHES.find(w => w.id === wt).n : '';
   return '<article class="meal" data-act="open" data-i="' + i + '" tabindex="0"><div class="ds"><small>' + (WD[S.dset[d]] || '').slice(0, 2).toUpperCase() + '</small><b>' + dayDate(d).getDate() + '</b></div>' + ph(r.id, 'medium', 'sm') +
-    '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips">' + (rid ? '' : '<span class="chip">' + mealLabel(i) + '</span>') + '' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
+    '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
     '<div class="mm"><span>👤 ' + S.persons + '</span><span>Anteil ca. ' + eur(portionCost(r)) + '</span></div></div>' +
     '<button class="pin' + (s.pin ? ' on' : '') + '" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="' + (s.pin ? 'Gericht lösen' : 'Gericht anheften') + '">' + (s.pin ? '🔒' : '🔓') + '</button></article>';
 }
@@ -376,7 +376,7 @@ function recipeView(i, rid){
   return '<div class="scr rec"><div class="hero">' + ph(r.id, 'large', 'big') +
     '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="' + (rid ? 'fav' : 'pin') + '" data-i="' + i + '" data-id="' + r.id + '" aria-label="' + (rid ? 'Favorit' : 'Anheften') + '">' + (rid ? (FAV.includes(r.id) ? '♥' : '♡') : (s.pin ? '🔒' : '🔓')) + '</button></div>' +
     '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' +
-    '<div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
+    '<div class="chips">' + (rid ? '' : '<span class="chip">' + mealLabel(i) + '</span>') + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
     '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '' + (rid ? '' : '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button><button class="btn ghost fv" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>') + '' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
