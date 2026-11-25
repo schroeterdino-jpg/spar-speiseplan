@@ -42,7 +42,7 @@ function addDB(list){
     const id = 'db_' + d.i;
     if (R[id]) return;
     for (const k in (d.cn || {})) if (!ING[k]) ING[k] = {name:d.cn[k], u:'Stück', pack:1, lbl:'nach Bedarf', area:'Sonstiges', e:'🛒', p:[1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2], custom:true};
-    const r = {id, n:d.n, ok:DBDEV, min:d.m, img:'https://img.chefkoch-cdn.de/rezepte/' + d.im.replace('<format>', 'crop-480x360'), tags:d.t || [], z:d.z, s:d.s, raw:d.rw, yield:d.y,
+    const r = {id, n:d.n, ok:DBDEV, min:d.m, img:'https://img.chefkoch-cdn.de/rezepte/' + d.im.replace('<format>', 'crop-960x540'), tags:d.t || [], z:d.z, s:d.s, raw:d.rw, yield:d.y,
       url:'https://www.chefkoch.de/rezepte/' + d.i + '/', source:'Chefkoch', own:true, db:true, fl:d.fl || '', rawn:norm(d.rw.join(' '))};
     r.emo = ING[r.z[0][0]].e;
     RECIPES.push(r); R[id] = r;
