@@ -30,6 +30,8 @@ let P = LS.get('sp-plan', null);
 let CP = LS.get('sp-preise', {});
 let SAVED = LS.get('sp-saved', []);
 let OWN = LS.get('sp-eigene', []);
+let HAVE = LS.get('sp-have', []);
+let FAV = LS.get('sp-fav', []);
 function addOwn(r){
   if (R[r.id]) return;
   for (const k in (r.defs || {})) ING[k] = r.defs[k];
@@ -71,7 +73,7 @@ const packTxt = g => g.lbl ? g.lbl : fmt(g.pack, g.u);
 function shop(rids){
   const tot = {};
   for (const rid of rids) for (const [i, a] of R[rid].z) tot[i] = (tot[i] || 0) + a * S.persons;
-  const rows = Object.keys(tot).map(i => {
+  const rows = Object.keys(tot).filter(i => !HAVE.includes(i)).map(i => {
     const g = ING[i], t = tot[i];
     if (isLoose(i)) { const w = Math.max(50, Math.ceil(t / 50 - 1e-9) * 50); return {i, t, w, loose: true, cost: w / g.pack * price(i)}; }
     const packs = Math.max(1, Math.ceil(t / g.pack - 1e-9));
@@ -132,7 +134,7 @@ function generate(resetPins){
       const a = Math.random();
       const keyed = el.map(r => {
         const base = Math.random() < 0.4 ? Math.random() : pc[r.id] / maxPc;
-        return {r, k: base * (1 - a + 2 * a * Math.random()) - wishScore(r) * 0.15 + (pinSet.has(r.id) ? 10 : 0)};
+        return {r, k: base * (1 - a + 2 * a * Math.random()) - wishScore(r) * 0.15 - (FAV.includes(r.id) ? 0.3 : 0) + (pinSet.has(r.id) ? 10 : 0)};
       });
       keyed.sort((x, y) => x.k - y.k);
       const sorted = keyed.map(x => x.r).slice(0, Math.max(1, Math.min(el.length, free)));
@@ -141,7 +143,7 @@ function generate(resetPins){
       if (cost < cheapCost) { cheapCost = cost; cheap = ids; }
       if (cost <= avail) {
         const distinct = new Set(ids).size;
-        const w = ids.reduce((s, i) => s + wishScore(R[i]), 0);
+        const w = ids.reduce((s, i) => s + wishScore(R[i]) + (FAV.includes(i) ? 2 : 0), 0);
         const sc = distinct * 100 + w * 12 + Math.random() * 30 - cost * 0.5;
         if (sc > bestScore) { bestScore = sc; best = ids; }
       }
@@ -250,6 +252,7 @@ function stepView(n){
       '<div class="tiles3">' + STORES.map((s, i) =>
         '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '">' + (LOGOS.includes(s) ? '<img src="logos/' + s.toLowerCase() + '.png" alt="' + s + '"><span class="sn">' + s + '</span>' : '<span>' + s + '</span>') + '</button>').join('') + '</div>' +
       '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>' +
+      '<button class="btn ghost wide" data-act="suche">🔎 Rezepte suchen' + (FAV.length ? ' (' + FAV.length + ' Favoriten)' : '') + '</button>' +
       (SAVED.length ? '<button class="btn ghost wide" data-act="gesp">♡ Gespeicherte Pläne (' + SAVED.length + ')</button>' : ''));
   }
   if (n === 1) {
@@ -330,7 +333,7 @@ function mealCard(s, i, d){
   const wt = r.tags.find(t => S.wishes.includes(t)) || r.tags[0];
   const wn = wt ? WISHES.find(w => w.id === wt).n : '';
   return '<article class="meal" data-act="open" data-i="' + i + '" tabindex="0"><div class="ds"><small>' + (WD[S.dset[d]] || '').slice(0, 2).toUpperCase() + '</small><b>' + dayDate(d).getDate() + '</b></div>' + ph(r.id, 'medium', 'sm') +
-    '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
+    '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips">' + (rid ? '' : '<span class="chip">' + mealLabel(i) + '</span>') + '' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
     '<div class="mm"><span>👤 ' + S.persons + '</span><span>Anteil ca. ' + eur(portionCost(r)) + '</span></div></div>' +
     '<button class="pin' + (s.pin ? ' on' : '') + '" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="' + (s.pin ? 'Gericht lösen' : 'Gericht anheften') + '">' + (s.pin ? '🔒' : '🔓') + '</button></article>';
 }
@@ -355,16 +358,16 @@ function planView(){
     '<p class="credit">Preise sind Schätzungen für ganze Packungen. Fotos sind Symbolfotos von <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>.</p></main>' +
     '<div class="bar two"><button class="btn ghost" data-act="regen">↻ Alle neu generieren</button><button class="btn" data-act="saveplan">Plan speichern</button></div></div>';
 }
-function recipeView(i){
-  const s = P.slots[i]; if (!s) return planView();
+function recipeView(i, rid){
+  const s = rid ? {r:rid} : (P && P.slots[i]); if (!s) return planView();
   const r = R[s.r]; const pn = portionsView || S.persons;
   const devs = r.ok.map(d => DEVS.find(x => x.id === d).n).join(' oder ');
   return '<div class="scr rec"><div class="hero">' + ph(r.id, 'large', 'big') +
-    '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="Anheften">' + (s.pin ? '🔒' : '🔓') + '</button></div>' +
+    '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="' + (rid ? 'fav' : 'pin') + '" data-i="' + i + '" data-id="' + r.id + '" aria-label="' + (rid ? 'Favorit' : 'Anheften') + '">' + (rid ? (FAV.includes(r.id) ? '♥' : '♡') : (s.pin ? '🔒' : '🔓')) + '</button></div>' +
     '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' +
     '<div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
     '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
-    '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button></div>' +
+    '' + (rid ? '' : '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button><button class="btn ghost fv" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>') + '' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
     (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(t) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + r.yield + ' Portionen, wie auf der Originalseite.</p>' : '') +
     (r.own ? '' : '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u, true) + '</span></li>').join('') + '</ul>') +
@@ -386,17 +389,34 @@ function shopView(){
     const rows = sh.rows.filter(x => ING[x.i].area === a); if (!rows.length) return '';
     return '<section class="grp"><h2 class="h2">' + a + '</h2>' + rows.map(x => {
       const g = ING[x.i];
-      return '<label class="row"><input type="checkbox" data-chk="' + x.i + '"' + (P.checked[x.i] ? ' checked' : '') + '><span class="ie">' + g.e + '</span><span class="rt"><b>' + esc(g.name) + '</b><span>' + (g.custom ? 'Nach Bedarf einkaufen (Preis geschätzt)' : x.loose ? 'Kaufe ca. ' + fmt(x.w, g.u) + ' (lose)' : 'Du brauchst ' + fmt(x.t, g.u) + ' · ' + x.packs + ' × ' + packTxt(g)) + '</span></span><span class="rp">' + eur(x.cost) + '</span></label>';
+      return '<label class="row"><input type="checkbox" data-chk="' + x.i + '"' + (P.checked[x.i] ? ' checked' : '') + '><span class="ie">' + g.e + '</span><span class="rt"><b>' + esc(g.name) + '</b><button type="button" class="hv" data-act="have" data-id="' + x.i + '">Habe ich zu Hause</button><span>' + (g.custom ? 'Nach Bedarf einkaufen (Preis geschätzt)' : x.loose ? 'Kaufe ca. ' + fmt(x.w, g.u) + ' (lose)' : 'Du brauchst ' + fmt(x.t, g.u) + ' · ' + x.packs + ' × ' + packTxt(g)) + '</span></span><span class="rp">' + eur(x.cost) + '</span></label>';
     }).join('') + '</section>';
   }).join('');
+  const haveList = HAVE.length ? '<details class="fold"><summary>Zu Hause vorhanden (' + HAVE.length + ')</summary><p class="note">Diese Zutaten stehen nicht auf der Liste und kosten nichts.</p>' +
+    HAVE.filter(k => ING[k]).map(k => '<div class="pr"><span>' + esc(ING[k].name) + '</span><button type="button" class="btn ghost sm" data-act="unhave" data-id="' + k + '">Doch kaufen</button></div>').join('') + '</details>' : '';
   const fold = '<details class="fold"><summary>Preise anpassen (' + STORES[S.store] + ')</summary><p class="note">Trage den Preis pro Packung ein, den du im Markt siehst.</p>' +
     sh.rows.map(x => { const g = ING[x.i]; return '<div class="pr"><span>' + esc(g.name) + '<small>pro ' + packTxt(g) + (isLoose(x.i) ? ' (lose)' : '') + '</small></span><input type="number" step="0.01" min="0" inputmode="decimal" data-price="' + x.i + '" value="' + price(x.i).toFixed(2) + '" aria-label="Preis ' + esc(g.name) + '"></div>'; }).join('') +
     '<button class="btn ghost" data-act="resetprice">Meine Preise zurücksetzen</button></details>';
   return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Einkauf bei ' + STORES[S.store] + '</div><span class="ib ghost"></span></header>' +
-    '<main class="main"><h1 class="h1">Einkaufsliste</h1><p class="sub">' + done + ' von ' + sh.rows.length + ' Artikeln gekauft</p>' + groups + fold + '</main>' +
+    '<main class="main"><h1 class="h1">Einkaufsliste</h1><p class="sub">' + done + ' von ' + sh.rows.length + ' Artikeln gekauft</p>' + groups + haveList + fold + '</main>' +
     '<div class="bar tot"><span>Einkauf gesamt</span><b>' + (hasEst(sh.rows) ? 'ca. ' : '') + eur(sh.total) + '</b></div></div>';
 }
 
+function resList(q){
+  const t = norm(q).split(/\s+/).filter(Boolean);
+  let list = RECIPES.filter(allowed);
+  if (t.length) list = list.filter(r => { const n = norm(r.n) + ' ' + (r.rawn || ''); return t.every(w => n.includes(w)); }).sort((a, b) => (FAV.includes(b.id) - FAV.includes(a.id)) || (t.every(w => norm(b.n).includes(w)) - t.every(w => norm(a.n).includes(w))));
+  else if (FAV.length) list = list.filter(r => FAV.includes(r.id));
+  else list = list.slice(0, 400).sort(() => 0.5 - Math.random()).slice(0, 20);
+  const total = list.length; list = list.slice(0, 40);
+  if (!list.length) return '<p class="note ctr">Nichts gefunden. Prüfe auch deine Einstellungen (Ernährung, Allergien, blockierte Zutaten).</p>';
+  const head = t.length ? '<p class="note">' + total + ' Rezepte' + (total > 40 ? ', die ersten 40' : '') + '</p>' : '<p class="note">' + (FAV.length ? 'Deine Favoriten' : 'Zufällige Ideen. Suche oben nach Zutat oder Gericht.') + '</p>';
+  return head + list.map(r => '<div class="rr" data-act="orec" data-id="' + r.id + '" role="button" tabindex="0">' + ph(r.id, 'medium', 'sq') + '<div><h3>' + esc(r.n) + '</h3><p>⏱ ' + r.min + ' Min. · ca. ' + eur(portionCost(r) / S.persons) + ' pro Portion</p></div><button type="button" class="hb" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>').join('');
+}
+function searchView(){
+  return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Rezepte</div><span class="ib ghost"></span></header><main class="main"><h1 class="h1">Rezepte suchen</h1>' +
+    '<label class="search"><span aria-hidden="true">🔎</span><input id="rq" type="search" placeholder="z. B. Hähnchen, Suppe, Auflauf" autocomplete="off"></label><div id="rres">' + resList('') + '</div></main></div>';
+}
 function savedView(){
   const list = SAVED.length ? SAVED.map(it => '<article class="svd"><div><h3>' + esc(it.name) + '</h3><p>' + STORES[it.snap.store] + ' · ' + it.snap.dset.length + (it.snap.dset.length === 1 ? ' Tag' : ' Tage') + ' · ' + it.snap.persons + ' Pers. · ' + eur(it.total) + '</p></div>' +
     '<div class="sb"><button class="btn sm" data-act="gopen" data-id="' + it.id + '">Öffnen</button><button class="btn ghost sm" data-act="gdel" data-id="' + it.id + '" aria-label="Löschen">🗑</button></div></article>').join('') : '<p class="note ctr">Noch nichts gespeichert. Tippe beim Plan auf "Plan speichern".</p>';
@@ -414,6 +434,10 @@ function render(keepScroll){
   } else if (a === 'laden') {
     html = loadingView();
     loadTimer = setTimeout(() => { showFresh = true; go('#/plan', true); }, 3200);
+  } else if (a === 'suche') {
+    html = searchView();
+  } else if (a === 'r') {
+    html = recipeView(0, b);
   } else if (a === 'gespeichert') {
     html = savedView();
   } else if (P && a === 'einkauf') {
@@ -491,6 +515,11 @@ document.addEventListener('click', e => {
     SAVED = SAVED.slice(0, 20); LS.set('sp-saved', SAVED); toast('Plan gespeichert ♡'); return;
   }
   if (act === 'gesp') { go('#/gespeichert'); return; }
+  if (act === 'suche') { go('#/suche'); return; }
+  if (act === 'orec') { go('#/r/' + el.dataset.id); return; }
+  if (act === 'fav') { const id = el.dataset.id; FAV = FAV.includes(id) ? FAV.filter(x => x !== id) : FAV.concat(id); LS.set('sp-fav', FAV); toast(FAV.includes(id) ? 'Als Favorit gemerkt' : 'Favorit entfernt'); if (route()[0] === 'suche') { const q = $('#rq'); $('#rres').innerHTML = resList(q ? q.value : ''); } else render(true); return; }
+  if (act === 'have') { if (!HAVE.includes(el.dataset.id)) HAVE.push(el.dataset.id); LS.set('sp-have', HAVE); toast('Steht nicht mehr auf der Liste'); render(true); return; }
+  if (act === 'unhave') { HAVE = HAVE.filter(x => x !== el.dataset.id); LS.set('sp-have', HAVE); render(true); return; }
   if (act === 'gopen') { const it = SAVED.find(x => x.id === el.dataset.id); if (it) { Object.assign(S, it.snap); S.days = S.dset.length; P = JSON.parse(JSON.stringify(it.plan)); save(); go('#/plan'); } return; }
   if (act === 'gdel') { SAVED = SAVED.filter(x => x.id !== el.dataset.id); LS.set('sp-saved', SAVED); render(true); return; }
   if (act === 'swap') { if (swap(i)) { toast('Gericht getauscht'); render(true); } return; }
@@ -509,6 +538,8 @@ document.addEventListener('input', e => {
     { const b = $('#bud'); if (b) b.style.width = (String(b.value).length + 0.8) + 'ch'; }
     if (t.id === 'bud') { const r = $('#rng'); if (r) r.value = Math.min(200, Math.max(10, v)); } else { const b = $('#bud'); if (b) b.value = v; }
     save();
+  } else if (t.id === 'rq') {
+    $('#rres').innerHTML = resList(t.value);
   } else if (t.id === 'q') {
     $('#blk').innerHTML = blkGrid(t.value);
   }

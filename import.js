@@ -1,25 +1,34 @@
 'use strict';
 /* Rezept-Import: macht aus den Zutaten-Zeilen einer Rezeptseite Zutaten, die die App rechnen kann. */
-const norm = s => String(s).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+const norm = s => String(s).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[éèêë]/g, 'e').replace(/[àâá]/g, 'a').replace(/[îïí]/g, 'i').replace(/[ôó]/g, 'o').replace(/[ûù]/g, 'u').replace(/ç/g, 'c');
 const FR = {'½':'.5','¼':'.25','¾':'.75','⅓':'.33','⅔':'.67'};
-const SKIP = /salz|pfeffer|wasser|zucker|mehl|staerke|essig|senf|ketchup|gewuerz|paprikapulver|curry|zimt|muskat|oregano|thymian|rosmarin|basilikum|petersilie|schnittlauch|dill\b|lorbeer|kreuzkuemmel|kurkuma|chili|vanille|backpulver|sojasosse|sojasauce|worcester|tabasco|honig|sirup|zitronensaft|mayonnaise|knoblauchpulver|zwiebelpulver|koriander|minze|salbei|majoran|estragon|petersilie|kraeuter|garnier|deko|nach belieben|ca\.? ?\d+ ?cm/;
+const SKIP = /salz|pfeffer|wasser|zucker|mehl|staerke|essig|senf|ketchup|gewuerz|paprikapulver|curry|zimt|muskat|oregano|thymian|rosmarin|basilikum|petersilie|schnittlauch|dill\b|lorbeer|kreuzkuemmel|kurkuma|chili|vanille|backpulver|sojasosse|sojasauce|worcester|tabasco|honig|sirup|zitronensaft|mayonnaise|knoblauchpulver|zwiebelpulver|koriander|minze|salbei|majoran|estragon|petersilie|kraeuter|garnier|deko|nach belieben|ca\.? ?\d+ ?cm|sambal|fischsauce|austernsauce|teriyaki|sriracha|harissa|ajvar|saucenbinder|garam|ras el hanout|wacholder|nelke|piment|kardamom|kuemmel|bohnenkraut|sesam|tahin|noriblaetter|balsamico|aceto|sherry|kaffir|zitronengras|limettensaft|orangensaft|agavendicksaft|hefe|\bfett\b|fuer die form|zum braten|kapern|meerrettich|remoulade|pesto|erdnussbutter|\bsauce\b|\bsosse\b|wuerzpaste|bruehwuerfel|gemuesebruehe|gewuerzmischung|safran|lorbeer|ingwerpulver|ingwerwurzel pulver|curcuma|sternanis|vanillezucker|puderzucker|kokosraspel|schnittlauch|speisestaerke|gelatine|rosmarin|bruehe pulver/;
 const KEYMAP = [
   ['seelachs', /seelachs|kabeljau|fischfilet|alaska/], ['lachs', /lachs/], ['fischst', /fischstaebchen/],
   ['hack', /hackfleisch|\bhack\b|gehacktes|\bmett\b/],
-  ['haehnchen', /(haehnchen|huehner|huhn|pute|puten)[a-z]*(brust|filet)|brustfilet|haehnchenbrust/], ['keulen', /keule|schenkel|haehnchen|huhn|pute/],
-  ['wurst', /wuerstchen|bratwurst|wiener|bockwurst|wurst/], ['speck', /speck|bacon|schinken/],
+  ['haehnchen', /(haehnchen|huehner|huhn|pute|puten)[a-z]*(brust|bruest|filet)|brustfilet|haehnchenbrust/], ['keulen', /keule|schenkel|haehnchen|huhn|pute/],
+  ['wurst', /wuerstchen|bratwurst|bratwuerste|wiener|bockwurst|wurst|wuerste|salami|cabanossi|chorizo/], ['speck', /speck|bacon|schinken/],
   ['spinat', /spinat/], ['gemtk', /gemuesemischung|buntes gemuese|tk.?gemuese|tiefkuehl.?gemuese/], ['thunfisch', /thunfisch/],
   ['kidney', /kidney|rote bohnen/], ['kichererbsen', /kichererbsen/], ['kokos', /kokosmilch|kokosnussmilch|kokoscreme/], ['mais', /\bmais\b/], ['tomaten', /tomate/],
   ['zwiebeln', /zwiebel/], ['knoblauch', /knoblauch/], ['paprika', /paprika/], ['zucchini', /zucchini/], ['karotten', /karotte|moehre/], ['brokkoli', /brokkoli|broccoli/],
-  ['kohl', /weisskohl|spitzkohl|wirsing|\bkohl\b/], ['lauch', /lauch|porree/], ['pilze', /champignon|pilz/], ['suessk', /suesskartoffel|batate/], ['kartoffeln', /kartoffel/],
-  ['linsen', /linsen/], ['couscous', /couscous/], ['lasagne', /lasagne/],
-  ['nudeln', /nudel|spaghetti|penne|fusilli|tagliatelle|pasta|makkaroni|rigatoni|farfalle|spirelli/], ['reis', /\breis\b|basmati|jasmin/],
+  ['kohl', /weisskohl|spitzkohl|wirsing|\bkohl\b|rotkohl|blaukraut|chinakohl|gruenkohl/], ['lauch', /lauch|porree/], ['pilze', /champignon|pilz|pfifferling/], ['suessk', /suesskartoffel|batate/], ['kartoffeln', /kartoffel/],
+  ['linsen', /linsen/], ['couscous', /couscous|bulgur|quinoa|hirse|graupen/], ['lasagne', /lasagne/],
+  ['nudeln', /nudel|spaghetti|penne|fusilli|tagliatelle|pasta|makkaroni|rigatoni|farfalle|spirelli|spaetzle|kritharaki|gnocchi|maultasche|schupfnudel/], ['reis', /reis\b|basmati|jasmin/],
   ['oel', /\boel\b|[a-z]oel\b|olivenoel|rapsoel|bratoel/], ['bruehe', /bruehe|bouillon|fond\b/],
-  ['eier', /\beier\b|\bei\b|\beier\)|vollei/], ['milch', /\bmilch\b|vollmilch/], ['sahne', /sahne|schlagobers|cremefine|kochcreme|creme fraiche|schmand/],
-  ['mozzarella', /mozzarella/], ['feta', /feta|hirtenkaese|schafskaese/], ['kaese', /kaese|gouda|emmentaler|parmesan|cheddar|gruyere|raclette/], ['joghurt', /joghurt|jogurt|skyr/],
-  ['tortilla', /tortilla|wrap/], ['pizzateig', /pizzateig/], ['broetchen', /broetchen|brioche/], ['brot', /toast|\bbrot\b|baguette|ciabatta/]
+  ['eier', /\beier\b|\bei\b|\beier\)|vollei|eigelb|eiweiss/], ['milch', /\bmilch\b|vollmilch/], ['sahne', /sahne|schlagobers|cremefine|kochcreme|creme fraiche|schmand|sauerrahm|saure sahne/],
+  ['mozzarella', /mozzarella/], ['feta', /feta|hirtenkaese|schafskaese/], ['kaese', /kaese|gouda|emmentaler|parmesan|cheddar|gruyere|raclette|gorgonzola|pecorino/], ['joghurt', /joghurt|jogurt|skyr/],
+  ['tortilla', /tortilla|wrap/], ['pizzateig', /pizzateig/], ['broetchen', /broetchen|brioche/], ['brot', /toast|\bbrot\b|baguette|ciabatta|semmel(?!broes)/],
+  ['fladenbrot', /fladenbrot|pitabrot|\bpita\b|naan|yufka/], ['blaetterteig', /blaetterteig|filoteig/],
+  ['butterschmalz', /butterschmalz|\bghee\b/], ['schmalz', /schmalz/], ['margarine', /margarine/], ['butter', /butter(?!milch)/], ['buttermilch', /buttermilch/],
+  ['ingwer', /ingwer/], ['zitrone', /zitrone|limette/], ['orange', /\borange/], ['apfel', /apfel|aepfel/], ['schalotten', /schalotte/], ['wein', /wein\b|weisswein|rotwein/],
+  ['bohnen', /bohne/], ['erbsen', /erbse/], ['paniermehl', /paniermehl|semmelbroesel|panko/], ['gurke', /gurke/], ['oliven', /olive/], ['avocado', /avocado/], ['aubergine', /aubergine/],
+  ['blumenkohl', /blumenkohl/], ['sellerie', /sellerie/], ['suppengruen', /suppengruen|suppengemuese/], ['radieschen', /radieschen/], ['kohlrabi', /kohlrabi/], ['rosenkohl', /rosenkohl/],
+  ['spargel', /spargel/], ['rucola', /rucola|ruccola/], ['rotebete', /rote bete|rote rueben/], ['kuerbis', /kuerbis/], ['mango', /mango/], ['ananas', /ananas/], ['salat', /salat/], ['peperoni', /peperoni/],
+  ['sojasprossen', /sojasprossen/], ['bambus', /bambus/], ['sauerkraut', /sauerkraut/], ['trockenobst', /rosine|dattel|trockenfruecht|cranberr/], ['nuesse', /nuss|nuesse|cashew|mandel|pinienkern|walnuss|erdnuss/],
+  ['haferflocken', /haferflocken/], ['rind', /rind|gulasch|rouladen/], ['schwein', /schwein|kasseler|schnitzel|gyros|kotelett|nacken|schinken\w*braten/], ['tofu', /tofu/], ['quark', /quark/],
+  ['halloumi', /halloumi|ricotta|mascarpone/], ['matjes', /matjes|hering/], ['garnelen', /garnele|shrimp|scampi/], ['seelachs', /\bfisch|fischfilet/], ['gemtk', /gemuese/]
 ];
-const PIECE = {zwiebeln:80, karotten:80, kartoffeln:100, paprika:150, zucchini:250, brokkoli:400, kohl:1000, lauch:200, pilze:25, suessk:300, haehnchen:150, keulen:200, lachs:125, seelachs:150, hack:250, wurst:80, speck:30, tomaten:100, feta:200, kaese:50, joghurt:150};
+const PIECE = {zitrone:100, limette:80, orange:200, apfel:150, schalotten:30, avocado:200, gurke:400, aubergine:300, blumenkohl:800, sellerie:500, suppengruen:400, radieschen:150, kohlrabi:300, kuerbis:1000, mango:350, ananas:1000, salat:300, rotebete:150, peperoni:15, ingwer:30, zwiebeln:80, karotten:80, kartoffeln:100, paprika:150, zucchini:250, brokkoli:400, kohl:1000, lauch:200, pilze:25, suessk:300, haehnchen:150, keulen:200, lachs:125, seelachs:150, hack:250, wurst:80, speck:30, tomaten:100, feta:200, kaese:50, joghurt:150};
 const CAN = {tomaten:400, kichererbsen:240, kidney:240, kokos:400, mais:285, thunfisch:150};
 const UNITS = {g:'g', gr:'g', gramm:'g', kg:'kg', ml:'ml', l:'l', liter:'l', el:'el', tl:'tl', prise:'prise', prisen:'prise', bund:'bund', pck:'pck', pkt:'pck', pk:'pck', paeckchen:'pck', packung:'pck', dose:'dose', dosen:'dose', glas:'glas', becher:'becher', scheibe:'stk', scheiben:'stk', stueck:'stk', stk:'stk', zehe:'zehe', zehen:'zehe', knolle:'knolle', kopf:'stk', handvoll:'bund', tasse:'tasse', kugel:'stk', kugeln:'stk', wuerfel:'stk', msp:'prise', cl:'cl', stange:'stk', stangen:'stk', zweig:'bund', zweige:'bund'};
 
@@ -45,7 +54,12 @@ function parseLine(line){
 }
 function toAmount(key, q, unit){
   const g = ING[key];
-  if (q == null) q = 1;
+  if (q == null) return (g.u === 'g' || g.u === 'ml') ? 20 : 0.25;
+  if (g.u === 'Stück' && key !== 'tortilla' && key !== 'pizzateig' && key !== 'broetchen') {
+    if (unit === 'g') return q / (PIECE[key] || 150); if (unit === 'kg') return q * 1000 / (PIECE[key] || 150);
+    if (unit === 'el' || unit === 'tl' || unit === 'prise') return q / 20;
+    return q;
+  }
   if (g.u === 'g') {
     if (unit === 'g') return q; if (unit === 'kg') return q * 1000; if (unit === 'ml') return q; if (unit === 'l') return q * 1000; if (unit === 'el') return q * 15; if (unit === 'tl') return q * 5;
     if (unit === 'pck') return q * Math.min(g.pack, 500);

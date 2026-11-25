@@ -216,3 +216,13 @@ a{color:inherit}
 .meal .mm span{white-space:nowrap}
 .meal .mi{min-width:0}
 .ing span{overflow-wrap:break-word !important;font-size:13px}
+
+.rr{display:flex;gap:12px;align-items:center;background:#fff;border-radius:18px;padding:10px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer}
+.rr .ph{width:76px;height:76px;flex:none;border-radius:14px;overflow:hidden}
+.rr>div:not(.ph){flex:1;min-width:0}
+.rr h3{font-size:15px;line-height:1.25;margin:0}
+.rr p{margin:3px 0 0;font-size:13px;color:#777}
+.rr .hb{background:none;border:0;font-size:26px;color:#e8553d;padding:6px;cursor:pointer}
+.acts .fv{flex:none;width:54px;padding:0;font-size:22px;color:#e8553d}
+.hv{display:inline-block;margin:4px 0;padding:4px 10px;border-radius:999px;border:1px solid #ddd;background:#fff;font:inherit;font-size:12px;color:#555;cursor:pointer}
+.row .rt{min-width:0}

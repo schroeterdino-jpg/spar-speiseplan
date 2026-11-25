@@ -51,7 +51,7 @@ function convert(d){
   const txt = norm(lines.join(' | ').replace(/kokos\w*milch|hafermilch|sojamilch|mandelmilch/gi, ' ') + ' ' + d.title);
   const fl = (MEAT.test(txt) ? 'm' : '') + (FISH.test(txt) ? 'f' : '') + (DAIRY.test(txt) ? 'd' : '') + (EGG.test(txt) ? 'e' : '') + (GLUTEN.test(txt) ? 'g' : '');
   rec.z = rec.z.map(([k, a]) => { const u = ctx.X.ING[k] ? ctx.X.ING[k].u : 'Stück'; const cap = (u === 'g' || u === 'ml') ? 600 : 4; return [k, Math.min(cap, a)]; });
-  const MAIN = new Set(['haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','couscous','lasagne','tortilla','pizzateig','eier','suessk','spinat','brokkoli','kohl','zucchini','paprika','pilze','mozzarella','feta','kaese','gemtk','broetchen','brot']);
+  const MAIN = new Set(['rind','schwein','tofu','halloumi','garnelen','matjes','blumenkohl','aubergine','kuerbis','spargel','haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','couscous','lasagne','tortilla','pizzateig','eier','suessk','spinat','brokkoli','kohl','zucchini','paprika','pilze','mozzarella','feta','kaese','gemtk','broetchen','brot']);
   const mainText = /fleisch|filet|steak|schnitzel|kotelett|geschnetzelt|braten|gulasch|tofu|garnele|forelle|kabeljau|reis|nudel|kartoffel|bohne|linse|kichererbse|kuerbis|blumenkohl|aubergine|knoedel|spaetzle|gnocchi|rouladen|bulgur|quinoa|haehnchen|huhn|pute|ente|wurst|leber|fisch/;
   const mappedMain = rec.z.some(([k]) => MAIN.has(k)) || mainText.test(norm(lines.join(' ')));
   if (!mappedMain || rec.z.length < 4) return null;
