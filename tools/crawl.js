@@ -5,7 +5,7 @@ const ctx = vm.createContext({console});
 vm.runInContext(fs.readFileSync('daten.js', 'utf8') + '\n' + fs.readFileSync('import.js', 'utf8') + '\n;this.X = {ING, buildRecipe, norm};', ctx);
 const {buildRecipe, norm} = ctx.X;
 
-const TARGET = +process.env.TARGET || 3600;
+const TARGET = +process.env.TARGET || 4200;
 const API = 'https://api.chefkoch.de/v2/recipes';
 const H = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36', 'Accept': 'application/json'};
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -51,6 +51,11 @@ function convert(d){
   const txt = norm(lines.join(' | ').replace(/kokos\w*milch|hafermilch|sojamilch|mandelmilch/gi, ' ') + ' ' + d.title);
   const fl = (MEAT.test(txt) ? 'm' : '') + (FISH.test(txt) ? 'f' : '') + (DAIRY.test(txt) ? 'd' : '') + (EGG.test(txt) ? 'e' : '') + (GLUTEN.test(txt) ? 'g' : '');
   rec.z = rec.z.map(([k, a]) => { const u = ctx.X.ING[k] ? ctx.X.ING[k].u : 'Stück'; const cap = (u === 'g' || u === 'ml') ? 600 : 4; return [k, Math.min(cap, a)]; });
+  const MAIN = new Set(['haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','couscous','lasagne','tortilla','pizzateig','eier','suessk','spinat','brokkoli','kohl','zucchini','paprika','pilze','mozzarella','feta','kaese','gemtk','broetchen','brot']);
+  const mainText = /fleisch|filet|steak|schnitzel|kotelett|geschnetzelt|braten|gulasch|tofu|garnele|forelle|kabeljau|reis|nudel|kartoffel|bohne|linse|kichererbse|kuerbis|blumenkohl|aubergine|knoedel|spaetzle|gnocchi|rouladen|bulgur|quinoa|haehnchen|huhn|pute|ente|wurst|leber|fisch/;
+  const mappedMain = rec.z.some(([k]) => MAIN.has(k)) || mainText.test(norm(lines.join(' ')));
+  if (!mappedMain || rec.z.length < 4) return null;
+  if (/soße|sosse|sauce|dip\b|dressing|fladen|pommes|aufstrich|beilage|marinade|gewürz|würz|paste\b|pesto|brühe|fond\b|vinaigrette|chutney|ketchup|mayonnaise|remoulade|sirup|gewürzmischung|kräuterbutter|butter\b|teig\b|chapati|naan|\bbrot\b|brötchen|zopf/i.test(d.title)) return null;
   const cn = {};
   for (const k in rec.defs) cn[k] = rec.defs[k].name;
   const t = [], nt = norm(d.title + ' ' + lines.join(' '));
@@ -102,7 +107,7 @@ async function pool(items, n, fn){
     await sleep(80);
   });
   console.log('Fertig:', out.length, 'Rezepte');
-  if (out.length < 1500) { console.log('Zu wenige Rezepte'); process.exit(1); }
+  if (out.length < 3000) { console.log('Zu wenige Rezepte'); process.exit(1); }
   fs.writeFileSync('rezepte.json', JSON.stringify(out));
   console.log('Größe MB', (fs.statSync('rezepte.json').size / 1e6).toFixed(1));
 })();
