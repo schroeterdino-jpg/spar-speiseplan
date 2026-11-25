@@ -51,10 +51,12 @@ function convert(d){
   const txt = norm(lines.join(' | ').replace(/kokos\w*milch|hafermilch|sojamilch|mandelmilch/gi, ' ') + ' ' + d.title);
   const fl = (MEAT.test(txt) ? 'm' : '') + (FISH.test(txt) ? 'f' : '') + (DAIRY.test(txt) ? 'd' : '') + (EGG.test(txt) ? 'e' : '') + (GLUTEN.test(txt) ? 'g' : '');
   rec.z = rec.z.map(([k, a]) => { const u = ctx.X.ING[k] ? ctx.X.ING[k].u : 'Stück'; const cap = (u === 'g' || u === 'ml') ? 600 : 4; return [k, Math.min(cap, a)]; });
-  const MAIN = new Set(['rind','schwein','tofu','halloumi','garnelen','matjes','blumenkohl','aubergine','kuerbis','spargel','haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','couscous','lasagne','tortilla','pizzateig','eier','suessk','spinat','brokkoli','kohl','zucchini','paprika','pilze','mozzarella','feta','kaese','gemtk','broetchen','brot']);
-  const mainText = /fleisch|filet|steak|schnitzel|kotelett|geschnetzelt|braten|gulasch|tofu|garnele|forelle|kabeljau|reis|nudel|kartoffel|bohne|linse|kichererbse|kuerbis|blumenkohl|aubergine|knoedel|spaetzle|gnocchi|rouladen|bulgur|quinoa|haehnchen|huhn|pute|ente|wurst|leber|fisch/;
+  const MAIN = new Set(['rind','schwein','tofu','garnelen','matjes','haehnchen','keulen','hack','lachs','seelachs','fischst','thunfisch','wurst','speck','nudeln','reis','kartoffeln','linsen','kichererbsen','kidney','bohnen','couscous','lasagne','pizzateig','suessk']);
+  const mainText = /fleisch|filet|steak|schnitzel|kotelett|geschnetzelt|braten|gulasch|tofu|garnele|forelle|kabeljau|reis|nudel|kartoffel|bohne|linse|kichererbse|kuerbis|blumenkohl|aubergine|knoedel|spaetzle|gnocchi|rouladen|bulgur|quinoa|haehnchen|huhn|pute|ente|leber|fisch/;
   const mappedMain = rec.z.some(([k]) => MAIN.has(k)) || mainText.test(norm(lines.join(' ')));
   if (!mappedMain || rec.z.length < 4) return null;
+  if (/salat|corn ?dog|hot ?dog|snack|fingerfood|häppchen|haeppchen|canap|cracker|chips|popcorn|pommes|wrap|sandwich|toast|bruschetta|crostini|dip\b|nuggets|pfannkuchen|crepe|crêpe|eierkuchen|müsli|muesli|porridge|smoothie|brotzeit|vorspeise|beilage/i.test(d.title)) return null;
+  if (rec.z.some(([k]) => k === 'salat')) return null;
   if (/soße|sosse|sauce|dip\b|dressing|fladen|pommes|aufstrich|beilage|marinade|gewürz|würz|paste\b|pesto|brühe|fond\b|vinaigrette|chutney|ketchup|mayonnaise|remoulade|sirup|gewürzmischung|kräuterbutter|butter\b|teig\b|chapati|naan|\bbrot\b|brötchen|zopf/i.test(d.title)) return null;
   const cn = {};
   for (const k in rec.defs) cn[k] = rec.defs[k].name;
@@ -65,7 +67,7 @@ function convert(d){
   if (/hahn|huhn|pute|lachs|thunfisch|ei\b|eier|linsen|kichererbse|bohne|quark|tofu|haehnchen/.test(nt)) t.push('protein');
   if (/salat|gemuese|suppe|linsen|bohne|brokkoli|spinat|kohl/.test(nt)) t.push('ballast');
   if (mins <= 25) t.push('schnell');
-  if ((d.difficulty || 2) <= 1 && mins <= 40) t.push('familie');
+  if (mins <= 50 && /nudel|spaghetti|auflauf|kartoffel|schnitzel|frikadelle|hack|haehnchen|huhn|reis|suppe|eintopf|pizza|lasagne|gulasch|knoedel|pueree|spaetzle|bolognese|lauch|gemuese/.test(norm(d.title)) && !/curry|thai|sushi|wok|ramen|asia|indisch|mexik|tex mex/.test(norm(d.title))) t.push('familie');
   return {i: d.id, n: d.title.slice(0, 80), m: mins, im: tpl.replace(/^.*?\/rezepte\//, ''), y: yieldN, z: rec.z, s: steps, cn, rw: lines, fl, t};
 }
 async function pool(items, n, fn){
