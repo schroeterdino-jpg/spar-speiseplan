@@ -1,0 +1,10 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          sleep 60
+          r=$(curl -s -m 30 -w ' HTTP%{http_code}' 'https://spar-speiseplan.vercel.app/api/chefkoch?q=gulasch' | head -c 300)
+          echo "::notice title=probe::$r"
