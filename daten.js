@@ -50,6 +50,7 @@ const RAW = {
 };
 const ING = {};
 for (const k in RAW) { const a = RAW[k]; ING[k] = {name:a[0], u:a[1], pack:a[2], lbl:a[3], area:a[4], e:a[5], p:a[6]}; }
+const LOOSE = new Set(['paprika','zucchini','karotten','brokkoli','kohl','lauch','suessk']); /* lose Ware: nach Gewicht */
 const AREAS = ['Obst & Gemüse','Fleisch & Fisch','Milch & Eier','Tiefkühl','Konserven','Vorrat','Brot & Backwaren'];
 const POPULAR = ['knoblauch','eier','zwiebeln','milch','karotten','tomaten','kartoffeln','paprika','pilze','joghurt','kaese','sahne'];
 
