@@ -57,11 +57,14 @@ const save = () => { LS.set('sp-settings', S); LS.set('sp-plan', P); LS.set('sp-
 
 /* ---------- Preise und Kosten ---------- */
 function price(i){ const c = CP[S.store] && CP[S.store][i]; if (c != null) return c; const b = PBASE[S.store] || PBASE[0]; return Math.round(ING[i].p[b[0]] * b[1] * 100) / 100; }
-function fmt(a, u){
+function fmt(a, u, exact){
   if (u === 'g') return a >= 1000 ? num(a / 1000) + ' kg' : Math.round(a) + ' g';
   if (u === 'ml') return a >= 1000 ? num(a / 1000) + ' l' : Math.round(a) + ' ml';
-  return num(a) + ' ' + u;
+  if (exact) return num(a) + ' ' + u;
+  const n = Math.max(1, Math.ceil(a - 1e-9)), SG = {Dosen:'Dose', Zehen:'Zehe', Eier:'Ei', Kugeln:'Kugel', Scheiben:'Scheibe', Packungen:'Packung', Becher:'Becher', Gläser:'Glas'};
+  return n + ' ' + (n === 1 && SG[u] ? SG[u] : u);
 }
+const hasEst = rows => rows.some(x => ING[x.i].custom);
 const packTxt = g => g.lbl ? g.lbl : fmt(g.pack, g.u);
 function shop(rids){
   const tot = {};
@@ -342,7 +345,7 @@ function planView(){
     ? '<p class="note warn">Mit deinen Wünschen passen nur ' + P.eligible + ' Gerichte. Deshalb wiederholen sich einige.</p>' : '';
   return '<div class="scr plan"><header class="top"><button class="ib" data-act="restart" aria-label="Neu starten">⚙︎</button><div class="pill">Geplant für ' + STORES[S.store] + '</div><button class="ib" data-act="gesp" aria-label="Gespeicherte Pläne">♡</button></header>' +
     '<main class="main"><h1 class="h1 ctr">' + (showFresh ? 'Dein Essensplan ist fertig' : 'Dein Essensplan') + '</h1>' +
-    '<div class="two"><div class="stat ring"><svg viewBox="0 0 100 100" class="rg" aria-hidden="true"><circle cx="50" cy="50" r="42" class="bg"/><circle cx="50" cy="50" r="42" class="fg' + (over ? ' bad' : '') + '" stroke-dasharray="' + (pct * 2.639).toFixed(1) + ' 264" transform="rotate(-90 50 50)"/><text x="50" y="57" text-anchor="middle">' + Math.round(total) + ' €</text></svg><div class="rt2"><div class="k">PLANKOSTEN</div><div class="v3">' + P.slots.length + ' Mahlzeiten für ' + eur(total) + '</div><div class="s">Budget: ' + eur(S.budget) + (over ? ' ⚠️' : ' ✓') + '</div></div></div>' +
+    '<div class="two"><div class="stat ring"><svg viewBox="0 0 100 100" class="rg" aria-hidden="true"><circle cx="50" cy="50" r="42" class="bg"/><circle cx="50" cy="50" r="42" class="fg' + (over ? ' bad' : '') + '" stroke-dasharray="' + (pct * 2.639).toFixed(1) + ' 264" transform="rotate(-90 50 50)"/><text x="50" y="57" text-anchor="middle">' + Math.round(total) + ' €</text></svg><div class="rt2"><div class="k">PLANKOSTEN</div><div class="v3">' + P.slots.length + ' Mahlzeiten für ' + (hasEst(sh.rows) ? 'ca. ' : '') + eur(total) + '</div><div class="s">Budget: ' + eur(S.budget) + (over ? ' ⚠️' : ' ✓') + '</div></div></div>' +
     '<button class="stat link" data-act="shop"><div class="k">ZUM ANZEIGEN TIPPEN ↗</div><div class="v2">Einkauf</div><div class="s">' + done + '/' + sh.rows.length + ' Artikel gekauft</div></button></div>' +
     (over ? '<p class="note warn">Dieser Plan ist ' + eur(total - S.budget) + ' zu teuer. Probiere weniger Tage, weniger Mahlzeiten oder ein höheres Budget.</p>' : '') +
     few +
@@ -362,7 +365,7 @@ function recipeView(i){
     '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button></div>' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
     (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(t) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + r.yield + ' Portionen, wie auf der Originalseite.</p>' : '') +
-    (r.own ? '' : '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u) + '</span></li>').join('') + '</ul>') +
+    (r.own ? '' : '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u, true) + '</span></li>').join('') + '</ul>') +
     '<p class="note">Salz, Pfeffer und Gewürze hast du hoffentlich zu Hause.</p>' +
     (r.own ? '<p class="note"><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Originalrezept bei ' + esc(r.source) + ' öffnen ↗</a></p>' : '') + '<h2 class="h2">Zubereitung</h2><ol class="steps">' + r.s.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' +
     '<p class="credit">Symbolfoto von <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>. Das Gericht kann anders aussehen.</p></main></div>';
@@ -389,7 +392,7 @@ function shopView(){
     '<button class="btn ghost" data-act="resetprice">Meine Preise zurücksetzen</button></details>';
   return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Einkauf bei ' + STORES[S.store] + '</div><span class="ib ghost"></span></header>' +
     '<main class="main"><h1 class="h1">Einkaufsliste</h1><p class="sub">' + done + ' von ' + sh.rows.length + ' Artikeln gekauft</p>' + groups + fold + '</main>' +
-    '<div class="bar tot"><span>Einkauf gesamt</span><b>' + eur(sh.total) + '</b></div></div>';
+    '<div class="bar tot"><span>Einkauf gesamt</span><b>' + (hasEst(sh.rows) ? 'ca. ' : '') + eur(sh.total) + '</b></div></div>';
 }
 
 function savedView(){
