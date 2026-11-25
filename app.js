@@ -358,6 +358,17 @@ function planView(){
     '<p class="credit">Preise sind Schätzungen für ganze Packungen. Fotos sind Symbolfotos von <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>.</p></main>' +
     '<div class="bar two"><button class="btn ghost" data-act="regen">↻ Alle neu generieren</button><button class="btn" data-act="saveplan">Plan speichern</button></div></div>';
 }
+function scaleLine(line, f){
+  const nf = v => { v = v * f; const r = v < 10 ? Math.round(v * 10) / 10 : Math.round(v); return String(r).replace('.', ','); };
+  const num = x => parseFloat(String(x).replace(',', '.'));
+  let m = /^(\d+)\s*\/\s*(\d+)(?!\d)/.exec(line);
+  if (m) return nf(num(m[1]) / num(m[2])) + line.slice(m[0].length);
+  m = /^(\d+(?:[.,]\d+)?)(?:\s*([-–])\s*(\d+(?:[.,]\d+)?))?(\s+(\d+)\s*\/\s*(\d+))?/.exec(line);
+  if (!m) return line;
+  let a = num(m[1]); if (m[5]) a += num(m[5]) / num(m[6]);
+  const first = nf(a);
+  return first + (m[3] ? m[2] + nf(num(m[3])) : '') + line.slice(m[0].length);
+}
 function recipeView(i, rid){
   const s = rid ? {r:rid} : (P && P.slots[i]); if (!s) return planView();
   const r = R[s.r]; const pn = portionsView || S.persons;
@@ -369,7 +380,7 @@ function recipeView(i, rid){
     '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '' + (rid ? '' : '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button><button class="btn ghost fv" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>') + '' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
-    (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(t) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + r.yield + ' Portionen, wie auf der Originalseite.</p>' : '') +
+    (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(scaleLine(t, pn / r.yield)) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + pn + ' Portionen' + (pn === r.yield ? ', wie im Originalrezept.' : ', umgerechnet vom Original (' + r.yield + ' Portionen).') + '</p>' : '') +
     (r.own ? '' : '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u, true) + '</span></li>').join('') + '</ul>') +
     '<p class="note">Salz, Pfeffer und Gewürze hast du hoffentlich zu Hause.</p>' +
     (r.own ? '<p class="note"><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Originalrezept bei ' + esc(r.source) + ' öffnen ↗</a></p>' : '') + '<h2 class="h2">Zubereitung</h2><ol class="steps">' + r.s.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' +
@@ -437,6 +448,7 @@ function render(keepScroll){
   } else if (a === 'suche') {
     html = searchView();
   } else if (a === 'r') {
+    if (lastRoute !== location.hash && !/^r\//.test(lastRoute)) portionsView = null;
     html = recipeView(0, b);
   } else if (a === 'gespeichert') {
     html = savedView();
