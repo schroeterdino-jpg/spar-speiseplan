@@ -18,6 +18,7 @@ jobs:
         run: |
           mkdir www
           cp index.html app.js daten.js foods.js import.js style.css www/
+          cp rezepte.json www/ || true
           cp -r logos www/logos
       - name: Android-Projekt erzeugen
         run: |

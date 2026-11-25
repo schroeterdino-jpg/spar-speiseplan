@@ -1,0 +1,30 @@
+name: Rezepte holen
+on:
+  push:
+    paths: ['tools/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency: rezepte
+jobs:
+  holen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Rezepte von Chefkoch holen
+        run: node tools/crawl.js
+      - name: Speichern und APK neu bauen lassen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "rezepte-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add rezepte.json
+          git commit -m "Rezept-Datenbank aktualisiert" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+          gh workflow run apk.yml --ref main

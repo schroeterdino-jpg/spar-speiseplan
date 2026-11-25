@@ -35,6 +35,19 @@ function addOwn(r){
   RECIPES.push(r); R[r.id] = r;
 }
 OWN.forEach(addOwn);
+/* Rezept-Datenbank (rezepte.json, von Chefkoch geholt) */
+const DBDEV = ['herd', 'ofen', 'heissluft', 'mikrowelle'];
+function addDB(list){
+  (list || []).forEach(d => {
+    const id = 'db_' + d.i;
+    if (R[id]) return;
+    for (const k in (d.cn || {})) if (!ING[k]) ING[k] = {name:d.cn[k], u:'Stück', pack:1, lbl:'nach Bedarf', area:'Sonstiges', e:'🛒', p:[1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2], custom:true};
+    const r = {id, n:d.n, ok:DBDEV, min:d.m, img:'https://img.chefkoch-cdn.de/rezepte/' + d.im.replace('<format>', 'crop-480x360'), tags:d.t || [], z:d.z, s:d.s, raw:d.rw, yield:d.y,
+      url:'https://www.chefkoch.de/rezepte/' + d.i + '/', source:'Chefkoch', own:true, db:true, fl:d.fl || '', rawn:norm(d.rw.join(' '))};
+    r.emo = ING[r.z[0][0]].e;
+    RECIPES.push(r); R[id] = r;
+  });
+}
 let THUMBS = LS.get('sp-thumbs', {});
 let portionsView = null;
 let showFresh = false;
@@ -72,9 +85,11 @@ function allowed(r){
   if (!r.ok.some(d => S.dev[d])) return false;
   const bk = blockedKeys();
   if (ids.some(i => bk.has(i) || S.blocked.includes(i))) return false;
-  if (r.own && ids.some(i => ING[i].custom && S.blocked.some(b => { const f = FOODS.find(x => x.id === b); return f && norm(ING[i].name).includes(norm(f.n.replace(/ \(.*\)/, ''))); }))) return false;
-  const meat = ids.some(i => MEAT.has(i)), fish = ids.some(i => FISH.has(i));
-  const dairy = ids.some(i => DAIRY.has(i)), egg = ids.includes('eier'), gl = ids.some(i => GLUTEN.has(i));
+  if (r.own && !r.db && ids.some(i => ING[i].custom && S.blocked.some(b => { const f = FOODS.find(x => x.id === b); return f && norm(ING[i].name).includes(norm(f.n.replace(/ \(.*\)/, ''))); }))) return false;
+  if (r.db && S.blocked.some(b => { const f = FOODS.find(x => x.id === b); return f && r.rawn.includes(norm(f.n.replace(/ \(.*\)/, ''))); })) return false;
+  const fl = r.fl || '';
+  const meat = ids.some(i => MEAT.has(i)) || fl.includes('m'), fish = ids.some(i => FISH.has(i)) || fl.includes('f');
+  const dairy = ids.some(i => DAIRY.has(i)) || fl.includes('d'), egg = ids.includes('eier') || fl.includes('e'), gl = ids.some(i => GLUTEN.has(i)) || fl.includes('g');
   if (S.diet === 'vegan' && (meat || fish || dairy || egg)) return false;
   if (S.diet === 'vegetarisch' && (meat || fish)) return false;
   if (S.diet === 'pescetarisch' && meat) return false;
@@ -108,7 +123,7 @@ function generate(resetPins){
   if (free === 0) {
     best = fixed.slice();
   } else {
-    for (let t = 0; t < 1500; t++) {
+    for (let t = 0, T = el.length > 500 ? 250 : 1500; t < T; t++) {
       const a = Math.random();
       const keyed = el.map(r => {
         const base = Math.random() < 0.4 ? Math.random() : pc[r.id] / maxPc;
@@ -161,7 +176,7 @@ function swap(i){
 const CATS = ['Vegetarian', 'Chicken', 'Pasta', 'Beef', 'Seafood', 'Side', 'Miscellaneous'];
 let thumbsLoading = null;
 function loadThumbs(){
-  const want = new Set(RECIPES.map(r => r.mid));
+  const want = new Set(RECIPES.filter(r => r.mid).map(r => r.mid));
   if ([...want].every(id => THUMBS[id])) return Promise.resolve(false);
   if (thumbsLoading) return thumbsLoading;
   thumbsLoading = Promise.allSettled(CATS.map(c =>
@@ -536,5 +551,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- Start ---------- */
-render(false);
+$('#app').innerHTML = '<div class="scr center"><p class="sub ctr">Rezepte werden geladen…</p></div>';
+const DBP = fetch('rezepte.json').then(r => r.ok ? r.json() : []).then(addDB).catch(() => 0);
+Promise.race([DBP, new Promise(res => setTimeout(res, 15000))]).then(() => render(false));
 loadThumbs().then(got => { if (got) render(true); });
