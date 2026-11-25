@@ -1,0 +1,206 @@
+'use strict';
+/* Zutaten: Name, Einheit, Packungsgröße, Packungsname (nur Stückware), Bereich, Symbol, Preise pro Packung [Aldi, Penny, Edeka].
+   Alle Preise sind grobe Schätzungen und im Einkauf anpassbar. */
+const RAW = {
+  nudeln:['Nudeln','g',500,null,'Vorrat','🍝',[0.79,0.85,0.99]],
+  reis:['Reis','g',1000,null,'Vorrat','🍚',[1.99,2.09,2.39]],
+  kartoffeln:['Kartoffeln','g',2500,null,'Obst & Gemüse','🥔',[3.29,3.49,3.99]],
+  hack:['Hackfleisch gemischt','g',500,null,'Fleisch & Fisch','🥩',[3.29,3.49,3.79]],
+  haehnchen:['Hähnchenbrust','g',500,null,'Fleisch & Fisch','🍗',[4.69,4.89,5.49]],
+  keulen:['Hähnchenkeulen','g',1000,null,'Fleisch & Fisch','🍗',[3.99,4.19,4.69]],
+  wurst:['Würstchen','g',400,null,'Fleisch & Fisch','🌭',[2.19,2.29,2.69]],
+  speck:['Speckwürfel','g',200,null,'Fleisch & Fisch','🥓',[0.99,1.05,1.29]],
+  lachs:['Lachsfilet (TK)','g',250,null,'Tiefkühl','🐟',[3.79,3.99,4.49]],
+  fischst:['Fischstäbchen','g',450,null,'Tiefkühl','🐟',[2.69,2.89,3.29]],
+  seelachs:['Seelachsfilet (TK)','g',450,null,'Tiefkühl','🐟',[3.49,3.69,3.99]],
+  spinat:['Blattspinat (TK)','g',450,null,'Tiefkühl','🥬',[1.39,1.49,1.79]],
+  gemtk:['Gemüsemischung (TK)','g',750,null,'Tiefkühl','🥦',[1.79,1.89,2.19]],
+  thunfisch:['Thunfisch (Dose)','Dosen',1,'Dose','Konserven','🐟',[1.29,1.39,1.69]],
+  tomaten:['Stückige Tomaten (Dose)','Dosen',1,'Dose','Konserven','🍅',[0.69,0.75,0.89]],
+  kichererbsen:['Kichererbsen (Dose)','Dosen',1,'Dose','Konserven','🫘',[0.85,0.89,1.09]],
+  kidney:['Kidneybohnen (Dose)','Dosen',1,'Dose','Konserven','🫘',[0.75,0.79,0.95]],
+  kokos:['Kokosmilch (Dose)','Dosen',1,'Dose','Konserven','🥥',[1.29,1.35,1.69]],
+  mais:['Mais (Dose)','Dosen',1,'Dose','Konserven','🌽',[0.69,0.75,0.89]],
+  zwiebeln:['Zwiebeln','g',1000,null,'Obst & Gemüse','🧅',[1.59,1.69,1.99]],
+  knoblauch:['Knoblauch','Zehen',10,'Knolle (ca. 10 Zehen)','Obst & Gemüse','🧄',[0.49,0.49,0.69]],
+  paprika:['Paprika','g',500,null,'Obst & Gemüse','🫑',[1.99,2.19,2.49]],
+  zucchini:['Zucchini','g',500,null,'Obst & Gemüse','🥒',[1.29,1.39,1.69]],
+  karotten:['Karotten','g',1000,null,'Obst & Gemüse','🥕',[1.19,1.29,1.49]],
+  brokkoli:['Brokkoli','g',500,null,'Obst & Gemüse','🥦',[1.49,1.59,1.89]],
+  kohl:['Weißkohl','g',1000,null,'Obst & Gemüse','🥬',[1.29,1.39,1.69]],
+  lauch:['Lauch','g',400,null,'Obst & Gemüse','🥬',[1.49,1.59,1.89]],
+  pilze:['Champignons','g',400,null,'Obst & Gemüse','🍄',[1.69,1.79,2.09]],
+  suessk:['Süßkartoffeln','g',1000,null,'Obst & Gemüse','🍠',[2.49,2.69,2.99]],
+  linsen:['Rote Linsen','g',500,null,'Vorrat','🫘',[1.69,1.79,1.99]],
+  couscous:['Couscous','g',500,null,'Vorrat','🌾',[1.49,1.59,1.89]],
+  lasagne:['Lasagneplatten','g',500,null,'Vorrat','🍝',[1.19,1.25,1.49]],
+  oel:['Speiseöl','ml',1000,null,'Vorrat','🫒',[2.49,2.69,2.99]],
+  bruehe:['Brühwürfel','Würfel',12,'12er-Packung','Vorrat','🧂',[0.79,0.85,0.99]],
+  eier:['Eier','Eier',10,'10er-Packung','Milch & Eier','🥚',[2.79,2.99,3.39]],
+  milch:['Milch','ml',1000,null,'Milch & Eier','🥛',[1.05,1.09,1.19]],
+  sahne:['Sahne','ml',200,null,'Milch & Eier','🥛',[0.69,0.75,0.89]],
+  kaese:['Geriebener Käse','g',200,null,'Milch & Eier','🧀',[1.59,1.69,1.99]],
+  mozzarella:['Mozzarella','Kugeln',1,'Kugel','Milch & Eier','🧀',[0.69,0.75,0.89]],
+  feta:['Feta','g',200,null,'Milch & Eier','🧀',[1.59,1.69,1.99]],
+  joghurt:['Naturjoghurt','g',500,null,'Milch & Eier','🥛',[0.79,0.85,0.99]],
+  brot:['Toastbrot','Scheiben',20,'Packung (20 Scheiben)','Brot & Backwaren','🍞',[0.89,0.95,1.19]],
+  tortilla:['Tortillas','Stück',8,'8er-Packung','Brot & Backwaren','🫓',[1.29,1.35,1.59]],
+  pizzateig:['Pizzateig (Kühlregal)','Stück',1,'Packung','Brot & Backwaren','🍕',[1.29,1.39,1.69]],
+  broetchen:['Burgerbrötchen','Stück',6,'Packung (6 Stück)','Brot & Backwaren','🥖',[0.99,1.05,1.29]]
+};
+const ING = {};
+for (const k in RAW) { const a = RAW[k]; ING[k] = {name:a[0], u:a[1], pack:a[2], lbl:a[3], area:a[4], e:a[5], p:a[6]}; }
+const AREAS = ['Obst & Gemüse','Fleisch & Fisch','Milch & Eier','Tiefkühl','Konserven','Vorrat','Brot & Backwaren'];
+const POPULAR = ['knoblauch','eier','zwiebeln','milch','karotten','tomaten','kartoffeln','paprika','pilze','joghurt','kaese','sahne'];
+
+const MEAT = new Set(['hack','haehnchen','keulen','wurst','speck']);
+const FISH = new Set(['lachs','fischst','seelachs','thunfisch']);
+const DAIRY = new Set(['milch','sahne','kaese','mozzarella','feta','joghurt']);
+const GLUTEN = new Set(['nudeln','couscous','brot','tortilla','fischst','wurst','lasagne','pizzateig','broetchen']);
+
+/* Wünsche ("Worauf hast du Lust?") */
+const WISHES = [
+  {id:'schnell', n:'Schnell & einfach', e:'⏱️'},
+  {id:'leicht', n:'Leicht & frisch', e:'🥗'},
+  {id:'familie', n:'Familienlieblinge', e:'🥘'},
+  {id:'gesund', n:'Gesunder Genuss', e:'🥬'},
+  {id:'liefer', n:'Liefergerichte selbst gemacht', e:'🍔'},
+  {id:'ballast', n:'Ballaststoffreich', e:'🌾'},
+  {id:'protein', n:'Proteinreich', e:'🍳'}
+];
+const DIETS = [
+  {id:'vegan', n:'Vegan', e:'🥑', grp:'art'},
+  {id:'vegetarisch', n:'Vegetarisch', e:'🥕', grp:'art'},
+  {id:'pescetarisch', n:'Pescetarisch', e:'🐟', grp:'art'},
+  {id:'gluten', n:'Glutenfrei', e:'🍚', grp:'x'},
+  {id:'lactose', n:'Laktosefrei', e:'🥛', grp:'x'}
+];
+const DEVS = [
+  {id:'herd', n:'Herdplatte', e:'🍳'},
+  {id:'ofen', n:'Backofen', e:'🔥'},
+  {id:'heissluft', n:'Heißluftfritteuse', e:'🍟'},
+  {id:'mikrowelle', n:'Mikrowelle', e:'♨️'}
+];
+
+/* Rezepte: mid = Foto-Nummer bei TheMealDB (Symbolfoto), z = Zutaten pro Person */
+const RECIPES = [
+ {id:'bolognese', n:'Spaghetti Bolognese', ok:['herd'], min:30, mid:'52770', tags:['familie'],
+  z:[['nudeln',100],['hack',80],['zwiebeln',40],['tomaten',0.5],['karotten',30],['knoblauch',1],['oel',5]],
+  s:['Zwiebel, Karotte und Knoblauch klein schneiden und im Öl anbraten.','Hack dazugeben und krümelig braun braten.','Tomaten zugeben, mit Salz, Pfeffer und Oregano würzen und 15 Minuten köcheln lassen.','Nudeln in Salzwasser kochen und mit der Soße servieren.']},
+ {id:'carbonara', n:'Spaghetti Carbonara', ok:['herd'], min:20, mid:'52982', tags:['familie'],
+  z:[['nudeln',100],['speck',40],['eier',1],['kaese',30]],
+  s:['Nudeln in Salzwasser kochen.','Speck in der Pfanne ohne Öl knusprig braten.','Eier mit Käse, Pfeffer und etwas Nudelwasser verrühren.','Nudeln abgießen, mit dem Speck mischen, die Eiermischung unterheben (den Topf dabei von der Platte nehmen) und sofort servieren.']},
+ {id:'tomatennudeln', n:'Tomatennudeln mit Mozzarella', ok:['herd'], min:20, mid:'52771', tags:['familie'],
+  z:[['nudeln',100],['tomaten',0.5],['zwiebeln',30],['knoblauch',1],['mozzarella',0.5],['oel',5]],
+  s:['Nudeln in Salzwasser kochen.','Zwiebel und Knoblauch im Öl anschwitzen, Tomaten dazugeben und 10 Minuten köcheln lassen.','Mit Salz, Pfeffer und einer Prise Zucker abschmecken.','Nudeln mit der Soße mischen und den Mozzarella in Stücken darauf verteilen.']},
+ {id:'thunfischnudeln', n:'Thunfisch-Nudeln', ok:['herd'], min:20, mid:'52837', tags:['leicht'],
+  z:[['nudeln',100],['thunfisch',0.5],['tomaten',0.3],['zwiebeln',30],['mais',0.25],['oel',5]],
+  s:['Nudeln kochen.','Zwiebel im Öl glasig braten, Tomaten zugeben und 8 Minuten köcheln lassen.','Thunfisch und Mais unterrühren und kurz erwärmen.','Mit den Nudeln mischen und mit Salz, Pfeffer und Oregano abschmecken.']},
+ {id:'lachsnudeln', n:'Lachs-Sahne-Nudeln', ok:['herd'], min:25, mid:'52823', tags:[],
+  z:[['nudeln',100],['lachs',70],['sahne',60],['spinat',60],['zwiebeln',20],['oel',5]],
+  s:['Nudeln kochen.','Zwiebel anbraten und den aufgetauten Spinat zugeben.','Lachs in Würfeln und die Sahne zugeben und 6 bis 8 Minuten sanft köcheln lassen.','Mit Salz und Pfeffer würzen und mit den Nudeln mischen.']},
+ {id:'pilznudeln', n:'Pilz-Rahmnudeln', ok:['herd'], min:25, mid:'52835', tags:[],
+  z:[['nudeln',100],['pilze',120],['sahne',60],['zwiebeln',30],['oel',5]],
+  s:['Nudeln kochen.','Zwiebel und Champignons in Scheiben in Öl anbraten.','Sahne zugeben und 5 Minuten köcheln lassen.','Mit Salz und Pfeffer würzen und mit den Nudeln mischen.']},
+ {id:'brokkoliauflauf', n:'Brokkoli-Nudelauflauf', ok:['ofen'], min:40, mid:'52849', tags:['familie'],
+  z:[['nudeln',90],['brokkoli',150],['sahne',50],['kaese',40],['zwiebeln',20]],
+  s:['Nudeln kochen und die Brokkoliröschen die letzten 3 Minuten mitkochen.','Abgießen und mit Sahne, gewürfelter Zwiebel, Salz und Pfeffer mischen.','In eine Form geben und den Käse darüberstreuen.','Bei 200 °C etwa 20 Minuten backen.']},
+ {id:'lasagne', n:'Lasagne', ok:['ofen'], min:75, mid:'52844', tags:['familie'],
+  z:[['lasagne',60],['hack',80],['tomaten',0.5],['sahne',50],['milch',60],['kaese',40],['zwiebeln',30]],
+  s:['Hack mit Zwiebel anbraten, Tomaten zugeben, würzen und 15 Minuten köcheln lassen.','Sahne mit Milch, Salz und Muskat zu einer Soße verrühren.','Die Form abwechselnd mit Fleischsoße, Lasagneplatten und Sahnesoße schichten und oben mit Käse bestreuen.','Bei 180 °C etwa 40 Minuten backen.']},
+ {id:'reispfanne', n:'Hähnchen-Reis-Pfanne', ok:['herd'], min:30, mid:'53161', tags:['liefer'],
+  z:[['reis',70],['haehnchen',100],['gemtk',150],['zwiebeln',30],['bruehe',0.25],['oel',5]],
+  s:['Reis mit der doppelten Menge Wasser und dem Brühwürfel nach Packungsangabe kochen.','Hähnchen in Würfel schneiden und mit der Zwiebel im Öl anbraten.','TK-Gemüse zugeben und 8 Minuten mitbraten.','Reis unterrühren und mit Salz und Pfeffer würzen.']},
+ {id:'kokoscurry', n:'Hähnchen-Kokos-Curry mit Reis', ok:['herd'], min:30, mid:'52814', tags:['liefer'],
+  z:[['haehnchen',100],['kokos',0.25],['gemtk',150],['reis',60],['zwiebeln',20],['oel',5]],
+  s:['Reis kochen.','Hähnchen in Würfeln mit Zwiebel in Öl anbraten und Currypulver kurz mitrösten.','TK-Gemüse und Kokosmilch zugeben und 10 Minuten köcheln lassen.','Mit Salz abschmecken und mit dem Reis servieren.']},
+ {id:'keulen', n:'Hähnchenkeulen mit Ofenkartoffeln', ok:['ofen','heissluft'], min:45, mid:'52993', tags:['familie'],
+  z:[['keulen',250],['kartoffeln',250],['karotten',80],['oel',10]],
+  s:['Keulen mit Öl, Salz, Pfeffer und Paprikapulver einreiben.','Kartoffeln in Spalten und Karotten in Stücke schneiden, mit Öl und Salz mischen.','Backofen: alles zusammen bei 200 °C etwa 40 Minuten backen.','Heißluftfritteuse: Keulen bei 190 °C etwa 25 bis 30 Minuten garen, Kartoffeln und Karotten in einem zweiten Durchgang etwa 20 Minuten.','Die Keulen sind fertig, wenn der austretende Saft klar ist.']},
+ {id:'wraps', n:'Hähnchen-Wraps', ok:['herd','heissluft'], min:25, mid:'53218', tags:['liefer','familie'],
+  z:[['tortilla',2],['haehnchen',100],['paprika',60],['karotten',40],['joghurt',40],['oel',5]],
+  s:['Hähnchen in Streifen schneiden, würzen und in der Pfanne oder in der Heißluftfritteuse (190 °C, etwa 10 Minuten) garen.','Paprika und Karotte in Streifen schneiden.','Tortillas kurz erwärmen und mit Joghurt bestreichen.','Füllen und einrollen.']},
+ {id:'gratin', n:'Kartoffelgratin mit Hähnchen', ok:['ofen'], min:65, mid:'52780', tags:['familie'],
+  z:[['kartoffeln',250],['haehnchen',100],['sahne',60],['kaese',30],['zwiebeln',20]],
+  s:['Kartoffeln in dünne Scheiben schneiden, Hähnchen in Streifen schneiden und kurz anbraten.','Beides in eine Form schichten, mit Zwiebelringen, Salz und Pfeffer würzen.','Sahne darübergießen und mit Käse bestreuen.','Bei 190 °C etwa 45 Minuten backen.']},
+ {id:'champignonpfanne', n:'Hähnchen-Champignon-Pfanne', ok:['herd'], min:35, mid:'52846', tags:[],
+  z:[['haehnchen',100],['pilze',100],['sahne',40],['kartoffeln',200],['zwiebeln',20],['oel',5]],
+  s:['Kartoffeln in Würfeln 15 Minuten kochen.','Hähnchen in Streifen in Öl anbraten.','Champignons dazugeben, mitbraten, die Sahne zugießen und 5 Minuten köcheln lassen.','Mit Salz und Pfeffer abschmecken und mit den Kartoffeln servieren.']},
+ {id:'burger', n:'Burger mit Pommes', ok:['herd'], min:40, mid:'53099', tags:['liefer','familie'],
+  z:[['broetchen',1],['hack',120],['kaese',20],['zwiebeln',20],['kartoffeln',200],['oel',8]],
+  s:['Hack mit Salz, Pfeffer und fein gewürfelter Zwiebel mischen und zu flachen Patties formen.','Kartoffeln in Stäbchen schneiden, mit Öl und Salz mischen und in der Pfanne, im Backofen (220 °C, etwa 30 Minuten) oder in der Heißluftfritteuse (200 °C, etwa 20 Minuten) garen.','Patties in der Pfanne etwa 4 Minuten pro Seite braten, den Käse zum Schluss darauflegen.','Brötchen aufschneiden, kurz anrösten und belegen.']},
+ {id:'hackauflauf', n:'Kartoffel-Hack-Auflauf', ok:['ofen'], min:55, mid:'53098', tags:['familie'],
+  z:[['kartoffeln',250],['hack',80],['sahne',50],['kaese',40],['zwiebeln',30]],
+  s:['Kartoffeln in Scheiben schneiden und 8 Minuten vorkochen.','Hack mit Zwiebel anbraten und würzen.','Kartoffeln und Hack in eine Form schichten, Sahne darübergießen, Käse obenauf.','Bei 200 °C etwa 35 Minuten backen.']},
+ {id:'kohlpfanne', n:'Kohlpfanne mit Hack und Kartoffeln', ok:['herd'], min:35, mid:'53488', tags:[],
+  z:[['kohl',250],['hack',100],['zwiebeln',30],['kartoffeln',150],['oel',5]],
+  s:['Kartoffeln in Würfeln etwa 15 Minuten kochen.','Hack mit Zwiebel in Öl anbraten.','Kohl in Streifen zugeben und 15 Minuten mitschmoren.','Kartoffeln unterheben und mit Salz, Pfeffer und Kümmel würzen.']},
+ {id:'gefpaprika', n:'Gefüllte Paprika', ok:['ofen'], min:50, mid:'53067', tags:['familie'],
+  z:[['paprika',200],['hack',80],['reis',40],['tomaten',0.25],['kaese',30],['zwiebeln',20]],
+  s:['Reis kochen und den Backofen auf 200 °C heizen.','Paprika halbieren und entkernen.','Hack mit Zwiebel anbraten, Tomaten und Reis untermischen und würzen.','Paprikahälften füllen, Käse darauf streuen und etwa 25 Minuten backen.']},
+ {id:'chilicon', n:'Chili con Carne mit Reis', ok:['herd'], min:40, mid:'52826', tags:['familie','protein'],
+  z:[['hack',90],['kidney',0.4],['mais',0.25],['tomaten',0.5],['zwiebeln',30],['reis',60],['oel',5]],
+  s:['Reis kochen.','Zwiebel und Hack in Öl krümelig anbraten.','Tomaten, Bohnen und Mais zugeben und 20 Minuten köcheln lassen.','Mit Salz, Pfeffer, Paprikapulver und Chili würzen und mit dem Reis servieren.']},
+ {id:'kartoffelsuppe', n:'Kartoffelsuppe mit Würstchen', ok:['herd'], min:35, mid:'52848', tags:['familie','leicht'],
+  z:[['kartoffeln',250],['karotten',60],['lauch',50],['zwiebeln',30],['bruehe',0.5],['wurst',60]],
+  s:['Kartoffeln, Karotten, Lauch und Zwiebel klein schneiden.','Alles mit Brühwürfel und Wasser bedecken und 20 Minuten kochen.','Teilweise stampfen, damit die Suppe sämig wird.','Würstchen in Scheiben schneiden und 5 Minuten darin erwärmen.']},
+ {id:'lachsbrokkoli', n:'Lachs mit Brokkoli und Reis', ok:['herd'], min:30, mid:'52959', tags:['leicht','gesund'],
+  z:[['lachs',100],['brokkoli',150],['reis',70],['oel',5]],
+  s:['Reis kochen.','Brokkoli in Röschen teilen und 5 Minuten in Salzwasser garen.','Lachs auftauen, salzen und im Öl auf jeder Seite 3 bis 4 Minuten braten.','Alles zusammen anrichten.']},
+ {id:'seelachs', n:'Seelachs mit Ofengemüse', ok:['ofen','heissluft'], min:35, mid:'53103', tags:['leicht','gesund'],
+  z:[['seelachs',150],['paprika',80],['zucchini',80],['kartoffeln',200],['oel',10]],
+  s:['Kartoffeln in Würfel, Paprika und Zucchini in Stücke schneiden und mit Öl und Salz mischen.','Backofen: Gemüse bei 200 °C etwa 20 Minuten vorgaren. Heißluftfritteuse: 190 °C, etwa 12 Minuten.','Seelachs salzen, auf das Gemüse legen und weitere 15 Minuten garen.','Mit Salz und Pfeffer abschmecken.']},
+ {id:'fischpueree', n:'Fischstäbchen mit Kartoffelpüree und Spinat', ok:['herd'], min:30, mid:'52802', tags:['familie'],
+  z:[['fischst',120],['kartoffeln',250],['milch',60],['spinat',100],['zwiebeln',15],['oel',5]],
+  s:['Kartoffeln schälen, in Stücke schneiden und etwa 20 Minuten in Salzwasser kochen.','Fischstäbchen in der Pfanne mit etwas Öl von beiden Seiten knusprig braten.','Spinat mit gewürfelter Zwiebel erhitzen und mit Salz und Pfeffer würzen.','Kartoffeln mit Milch und Salz zu Püree stampfen.']},
+ {id:'fischheiss', n:'Fischstäbchen mit Pommes', ok:['heissluft','ofen'], min:30, mid:'53419', tags:['liefer','familie'],
+  z:[['fischst',120],['kartoffeln',250],['karotten',80],['oel',10]],
+  s:['Kartoffeln in Stäbchen schneiden und mit Öl und Salz mischen.','Heißluftfritteuse auf 200 °C: Pommes etwa 20 Minuten garen, nach 10 Minuten schütteln.','Fischstäbchen die letzten 8 bis 10 Minuten dazugeben (Backofen: 200 °C, etwa 25 Minuten).','Karotten als Rohkost dazu.']},
+ {id:'linsensuppe', n:'Rote Linsensuppe mit Kokosmilch', ok:['herd'], min:30, mid:'52784', tags:['leicht','gesund'],
+  z:[['linsen',70],['kokos',0.25],['karotten',60],['zwiebeln',30],['bruehe',0.5],['tomaten',0.25],['brot',2],['oel',5]],
+  s:['Zwiebel und Karotten klein schneiden und im Topf in Öl anbraten.','Linsen, Tomaten, Brühwürfel und etwa 0,4 Liter Wasser pro Person zugeben.','20 Minuten köcheln lassen, dann die Kokosmilch einrühren.','Mit Salz, Pfeffer und Curry abschmecken, Brot dazu.']},
+ {id:'kichererbsencurry', n:'Kichererbsen-Curry mit Reis', ok:['herd'], min:30, mid:'52868', tags:['leicht','gesund'],
+  z:[['kichererbsen',0.5],['kokos',0.25],['reis',70],['spinat',80],['zwiebeln',30],['tomaten',0.25],['oel',5]],
+  s:['Reis kochen.','Zwiebel anbraten und Currypulver kurz mit anrösten.','Kichererbsen, Tomaten und Kokosmilch zugeben und 10 Minuten köcheln lassen.','Spinat zugeben, 5 Minuten mitgaren und mit dem Reis servieren.']},
+ {id:'chilisin', n:'Chili sin Carne mit Reis', ok:['herd'], min:35, mid:'52867', tags:['leicht','gesund'],
+  z:[['kidney',0.5],['mais',0.25],['tomaten',0.5],['paprika',60],['zwiebeln',30],['reis',60],['oel',5]],
+  s:['Reis kochen.','Zwiebel und Paprika in Öl anbraten.','Tomaten, Bohnen und Mais zugeben und 15 Minuten köcheln lassen.','Mit Salz, Pfeffer, Paprikapulver und Chili würzen und mit dem Reis servieren.']},
+ {id:'shakshuka', n:'Shakshuka mit Brot', ok:['herd'], min:25, mid:'52963', tags:['leicht'],
+  z:[['eier',2],['tomaten',0.5],['paprika',80],['zwiebeln',30],['brot',2],['oel',5]],
+  s:['Zwiebel und Paprika in Öl weich braten.','Tomaten zugeben, mit Salz, Pfeffer und Paprikapulver würzen und 10 Minuten köcheln lassen.','Mulden in die Soße drücken, Eier hineinschlagen, Deckel drauf und 6 bis 8 Minuten stocken lassen.','Mit Brot servieren.']},
+ {id:'omelett', n:'Gemüse-Omelett mit Brot', ok:['herd'], min:20, mid:'52915', tags:[],
+  z:[['eier',3],['paprika',60],['zwiebeln',20],['kaese',20],['brot',2],['oel',5]],
+  s:['Paprika und Zwiebel klein schneiden und in Öl weich braten.','Eier mit Salz und Pfeffer verquirlen und darübergeben.','Bei mittlerer Hitze stocken lassen und den Käse darüberstreuen.','Mit Brot servieren.']},
+ {id:'spinatei', n:'Spinat mit Ei und Kartoffeln', ok:['herd'], min:30, mid:'52872', tags:['leicht'],
+  z:[['spinat',150],['eier',2],['kartoffeln',200],['zwiebeln',20],['oel',5]],
+  s:['Kartoffeln kochen und pellen.','Zwiebel in Öl anbraten, den aufgetauten Spinat zugeben und erhitzen.','Eier einzeln hineinschlagen und stocken lassen, oder als Rührei braten.','Mit Salz, Pfeffer und Muskat würzen.']},
+ {id:'ofengemuese', n:'Ofengemüse mit Feta', ok:['ofen','heissluft'], min:40, mid:'52908', tags:['leicht','gesund'],
+  z:[['feta',60],['zucchini',100],['paprika',100],['kartoffeln',150],['zwiebeln',30],['oel',10]],
+  s:['Kartoffeln, Zucchini, Paprika und Zwiebel in Stücke schneiden und mit Öl, Salz und Pfeffer mischen.','Backofen: 200 °C, etwa 30 Minuten. Heißluftfritteuse: 190 °C, etwa 20 Minuten, zwischendurch schütteln.','Feta zerbröseln und die letzten 5 Minuten mitbacken.']},
+ {id:'ofenkartoffel', n:'Ofenkartoffeln mit Joghurt-Dip', ok:['ofen','heissluft','mikrowelle'], min:40, mid:'52978', tags:['familie'],
+  z:[['kartoffeln',300],['joghurt',100],['knoblauch',0.5],['karotten',80],['kaese',20]],
+  s:['Kartoffeln waschen und mehrfach mit der Gabel einstechen.','Backofen: 200 °C, etwa 50 Minuten. Heißluftfritteuse: 190 °C, etwa 35 Minuten. Mikrowelle: etwa 8 bis 10 Minuten pro 2 mittelgroße Kartoffeln, zwischendurch wenden. Mit einer Gabel prüfen, ob sie weich sind.','Joghurt mit Knoblauch, Salz und Pfeffer verrühren.','Kartoffeln aufschneiden, mit Dip und Käse füllen und Karotten als Rohkost dazu essen.']},
+ {id:'couscouspfanne', n:'Couscous-Gemüsepfanne mit Feta', ok:['herd'], min:25, mid:'53267', tags:['leicht','gesund'],
+  z:[['couscous',70],['paprika',80],['zucchini',80],['feta',40],['zwiebeln',20],['oel',5]],
+  s:['Couscous mit der gleichen Menge heißem Wasser übergießen und 5 Minuten quellen lassen.','Zwiebel, Paprika und Zucchini in Würfeln in Öl braten.','Couscous unterheben und würzen.','Feta darüberbröseln.']},
+ {id:'suessk', n:'Süßkartoffeln mit Kichererbsen', ok:['heissluft','ofen'], min:35, mid:'53275', tags:['gesund'],
+  z:[['suessk',250],['kichererbsen',0.5],['joghurt',60],['oel',8]],
+  s:['Süßkartoffeln in Würfel schneiden und mit Öl und Salz mischen.','Heißluftfritteuse: 190 °C, etwa 15 Minuten. Backofen: 200 °C, etwa 30 Minuten.','Abgetropfte Kichererbsen mit Paprikapulver zugeben und weitere 8 Minuten garen.','Mit Joghurt servieren.']},
+ {id:'pizza', n:'Pizza Margherita', ok:['ofen','heissluft'], min:25, mid:'53014', tags:['liefer','familie'],
+  z:[['pizzateig',0.5],['tomaten',0.25],['mozzarella',0.5],['kaese',30]],
+  s:['Teig auf einem Blech ausrollen.','Tomaten abtropfen lassen, mit Salz und Oregano würzen und auf dem Teig verstreichen.','Mozzarella zerzupfen und mit dem Käse darauf verteilen.','Backofen: 220 °C, etwa 12 Minuten. Heißluftfritteuse (wenn der Teig hineinpasst): 200 °C, etwa 8 Minuten.']},
+ {id:'mikroreis', n:'Mikrowellen-Gemüsereis mit Ei', ok:['mikrowelle'], min:20, mid:'53367', tags:['schnell'],
+  z:[['reis',70],['gemtk',150],['eier',1],['bruehe',0.25]],
+  s:['Reis mit der doppelten Menge Wasser und Brühwürfel in eine große mikrowellengeeignete Schüssel geben, abdecken und etwa 12 Minuten bei 600 Watt garen, einmal umrühren.','TK-Gemüse zugeben und weitere 5 Minuten garen.','Ei verquirlen, unterrühren und noch 1 bis 2 Minuten garen.','Mit Salz und Pfeffer abschmecken.']}
+];
+const R = {};
+RECIPES.forEach(r => {
+  R[r.id] = r;
+  const ids = r.z.map(x => x[0]);
+  const eggs = (r.z.find(x => x[0] === 'eier') || [0, 0])[1];
+  if (r.min <= 25 && !r.tags.includes('schnell')) r.tags.push('schnell');
+  if (ids.some(i => ['linsen','kichererbsen','kidney','kohl','brokkoli','spinat','gemtk','suessk'].includes(i))) r.tags.push('ballast');
+  if (ids.some(i => ['haehnchen','keulen','lachs','seelachs','hack','fischst','thunfisch','kichererbsen','kidney','linsen','feta'].includes(i)) || eggs >= 2) r.tags.push('protein');
+  r.tags = Array.from(new Set(r.tags));
+  r.emo = ING[ids[0]].e;
+});
