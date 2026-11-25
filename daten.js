@@ -67,7 +67,10 @@ const WISHES = [
   {id:'gesund', n:'Gesunder Genuss', e:'🥬'},
   {id:'liefer', n:'Liefergerichte selbst gemacht', e:'🍔'},
   {id:'ballast', n:'Ballaststoffreich', e:'🌾'},
-  {id:'protein', n:'Proteinreich', e:'🍳'}
+  {id:'protein', n:'Proteinreich', e:'🍳'},
+  {id:'kalorien', n:'Kalorienarm', e:'🪶'},
+  {id:'mediterran', n:'Mediterran', e:'🫒'},
+  {id:'asiatisch', n:'Asiatisch inspiriert', e:'🥢'}
 ];
 const DIETS = [
   {id:'vegan', n:'Vegan', e:'🥑', grp:'art'},
@@ -202,6 +205,9 @@ RECIPES.forEach(r => {
   if (r.min <= 25 && !r.tags.includes('schnell')) r.tags.push('schnell');
   if (ids.some(i => ['linsen','kichererbsen','kidney','kohl','brokkoli','spinat','gemtk','suessk'].includes(i))) r.tags.push('ballast');
   if (ids.some(i => ['haehnchen','keulen','lachs','seelachs','hack','fischst','thunfisch','kichererbsen','kidney','linsen','feta'].includes(i)) || eggs >= 2) r.tags.push('protein');
+  if (r.tags.includes('leicht')) r.tags.push('kalorien');
+  if (['bolognese','carbonara','tomatennudeln','thunfischnudeln','lasagne','shakshuka','couscouspfanne','ofengemuese','seelachs'].includes(r.id)) r.tags.push('mediterran');
+  if (['kokoscurry','kichererbsencurry','linsensuppe','reispfanne','lachsbrokkoli'].includes(r.id)) r.tags.push('asiatisch');
   r.tags = Array.from(new Set(r.tags));
   r.emo = ING[ids[0]].e;
 });

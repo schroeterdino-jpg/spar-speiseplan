@@ -11,7 +11,7 @@ const STORES = ['Aldi', 'Penny', 'Edeka', 'Lidl', 'Rewe', 'Netto', 'Kaufland', '
 const PBASE = [[0,1],[1,1],[2,1],[0,1],[2,1.03],[1,0.98],[1,1.02],[0,1.02]];
 const LOGOS = ['Aldi','Penny','Edeka','Lidl','Netto','Norma'];
 const WD = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-const STEPS = 8;
+const STEPS = 9;
 const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -25,6 +25,7 @@ if (!Array.isArray(S.dset) || !S.dset.length) S.dset = [0,1,2];
 S.days = S.dset.length;
 let P = LS.get('sp-plan', null);
 let CP = LS.get('sp-preise', {});
+let SAVED = LS.get('sp-saved', []);
 let THUMBS = LS.get('sp-thumbs', {});
 let portionsView = null;
 let showFresh = false;
@@ -218,7 +219,8 @@ function stepView(n){
     return shell(0, 'Wo kaufst du ein?', 'Die Preise passen wir an den Laden an.',
       '<div class="tiles3">' + STORES.map((s, i) =>
         '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '">' + (LOGOS.includes(s) ? '<img src="logos/' + s.toLowerCase() + '.png" alt="' + s + '"><span class="sn">' + s + '</span>' : '<span>' + s + '</span>') + '</button>').join('') + '</div>' +
-      '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>');
+      '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>' +
+      (SAVED.length ? '<button class="btn ghost wide" data-act="gesp">♡ Gespeicherte Pläne (' + SAVED.length + ')</button>' : ''));
   }
   if (n === 1) {
     return shell(1, 'Wie hoch ist dein Budget?', 'Stelle den Betrag ein, den du gerne ausgeben möchtest.',
@@ -254,13 +256,21 @@ function stepView(n){
         '<button class="card2' + (isOn(d) ? ' on' : '') + '" data-act="diet" data-id="' + d.id + '" aria-pressed="' + isOn(d) + '"><span class="em">' + d.e + '</span><span>' + d.n + '</span></button>').join('') + '</div>');
   }
   if (n === 6) {
-    return shell(6, 'Was hast du in der Küche?', 'Wähle alle Geräte aus, die du hast.',
+    const AL = [['Erdnüsse','Erdnüsse'],['Nüsse (alle)','Nüsse'],['Milchprodukte (alle)','Milchprodukte'],['Eier','Eier'],['Weizen','Weizen / Gluten'],['Soja','Soja'],['Fisch (alles)','Fisch'],['Schalentiere','Schalentiere']];
+    const ids = AL.map(a => FOODS.find(f => f.n === a[0]));
+    const any = ids.some(f => S.blocked.includes(f.id));
+    return shell(6, 'Allergien?', 'Wir lassen diese Zutaten aus deinen Rezepten und deiner Einkaufsliste weg.',
+      '<div class="cards2">' + ids.map((f, k) =>
+        '<button class="card2' + (S.blocked.includes(f.id) ? ' on' : '') + '" data-act="alg" data-id="' + f.id + '" aria-pressed="' + S.blocked.includes(f.id) + '"><span class="em">' + f.e + '</span><span>' + AL[k][1] + '</span></button>').join('') + '</div>', any ? 'Weiter' : 'Keine Allergien');
+  }
+  if (n === 7) {
+    return shell(7, 'Was hast du in der Küche?', 'Wähle alle Geräte aus, die du hast.',
       '<div class="cards2">' + DEVS.map(d =>
         '<button class="card2' + (S.dev[d.id] ? ' on' : '') + '" data-act="dev" data-id="' + d.id + '" aria-pressed="' + !!S.dev[d.id] + '"><span class="em">' + d.e + '</span><span>' + d.n + '</span></button>').join('') + '</div>');
   }
-  return shell(7, 'Blockierte Zutaten', 'Suche nach Zutaten, die du nicht essen möchtest. Rezepte mit diesen Zutaten schlagen wir nicht vor.',
+  return shell(8, 'Gibt es etwas, das du nicht isst?', 'Wähle alles Zutreffende. Mehr findest du über die Kategorien und die Suche.',
     '<label class="search"><span aria-hidden="true">🔍</span><input id="q" type="search" placeholder="Zutaten suchen…" autocomplete="off"></label>' +
-    '<div id="blk">' + blkGrid('') + '</div>', 'Plan erstellen');
+    '<div id="blk">' + blkGrid('') + '</div>', S.blocked.length ? 'Plan erstellen' : 'Ich esse alles');
 }
 function blkGrid(q){
   q = (q || '').trim().toLowerCase();
@@ -281,11 +291,15 @@ function loadingView(){
   return '<div class="scr center"><div class="collage">' + row(ids.slice(0, 10)) + row(ids.slice(10, 20).reverse()) + '</div>' +
     '<h1 class="h1 ctr">Wir finden Rezepte, die du lieben wirst…</h1><p class="sub ctr">Wir suchen passende Gerichte für dein Budget.</p></div>';
 }
-function mealCard(s, i){
+function dayDate(d){
+  const now = new Date(), idx = (now.getDay() + 6) % 7, diff = (S.dset[d] - idx + 7) % 7, t = new Date(now);
+  t.setDate(now.getDate() + diff); return t;
+}
+function mealCard(s, i, d){
   const r = R[s.r];
   const wt = r.tags.find(t => S.wishes.includes(t)) || r.tags[0];
   const wn = wt ? WISHES.find(w => w.id === wt).n : '';
-  return '<article class="meal" data-act="open" data-i="' + i + '" tabindex="0">' + ph(r.id, 'medium', 'sm') +
+  return '<article class="meal" data-act="open" data-i="' + i + '" tabindex="0"><div class="ds"><small>' + (WD[S.dset[d]] || '').slice(0, 2).toUpperCase() + '</small><b>' + dayDate(d).getDate() + '</b></div>' + ph(r.id, 'medium', 'sm') +
     '<div class="mi"><h3>' + esc(r.n) + '</h3><div class="chips"><span class="chip">' + mealLabel(i) + '</span>' + (wn ? '<span class="chip alt">' + esc(wn) + '</span>' : '') + '</div>' +
     '<div class="mm"><span>👤 ' + S.persons + '</span><span>Anteil ca. ' + eur(portionCost(r)) + '</span></div></div>' +
     '<button class="pin' + (s.pin ? ' on' : '') + '" data-act="pin" data-i="' + i + '" aria-pressed="' + !!s.pin + '" aria-label="' + (s.pin ? 'Gericht lösen' : 'Gericht anheften') + '">' + (s.pin ? '🔒' : '🔓') + '</button></article>';
@@ -296,14 +310,14 @@ function planView(){
   const done = sh.rows.filter(x => P.checked[x.i]).length;
   let days = '';
   for (let d = 0; d < S.days; d++) {
-    days += '<section class="day"><h2 class="dh">' + dayLabel(d) + '</h2>' +
-      Array.from({length:S.meals}, (_, m) => mealCard(P.slots[d * S.meals + m], d * S.meals + m)).join('') + '</section>';
+    days += '<section class="day">' +
+      Array.from({length:S.meals}, (_, m) => mealCard(P.slots[d * S.meals + m], d * S.meals + m, d)).join('') + '</section>';
   }
   const few = P.eligible < S.days * S.meals
     ? '<p class="note warn">Mit deinen Wünschen passen nur ' + P.eligible + ' Gerichte. Deshalb wiederholen sich einige.</p>' : '';
-  return '<div class="scr plan"><header class="top"><button class="ib" data-act="restart" aria-label="Neu starten">⚙︎</button><div class="pill">Geplant für ' + STORES[S.store] + '</div><span class="ib ghost"></span></header>' +
+  return '<div class="scr plan"><header class="top"><button class="ib" data-act="restart" aria-label="Neu starten">⚙︎</button><div class="pill">Geplant für ' + STORES[S.store] + '</div><button class="ib" data-act="gesp" aria-label="Gespeicherte Pläne">♡</button></header>' +
     '<main class="main"><h1 class="h1 ctr">' + (showFresh ? 'Dein Essensplan ist fertig' : 'Dein Essensplan') + '</h1>' +
-    '<div class="two"><div class="stat"><div class="k">GESCHÄTZTE KOSTEN</div><div class="v' + (over ? ' bad' : '') + '">' + eur(total) + ' <small>/ ' + eur(S.budget) + '</small></div><div class="line"><i class="' + (over ? 'bad' : '') + '" style="width:' + pct + '%"></i></div></div>' +
+    '<div class="two"><div class="stat ring"><svg viewBox="0 0 100 100" class="rg" aria-hidden="true"><circle cx="50" cy="50" r="42" class="bg"/><circle cx="50" cy="50" r="42" class="fg' + (over ? ' bad' : '') + '" stroke-dasharray="' + (pct * 2.639).toFixed(1) + ' 264" transform="rotate(-90 50 50)"/><text x="50" y="57" text-anchor="middle">' + Math.round(total) + ' €</text></svg><div class="rt2"><div class="k">PLANKOSTEN</div><div class="v3">' + P.slots.length + ' Mahlzeiten für ' + eur(total) + '</div><div class="s">Budget: ' + eur(S.budget) + (over ? ' ⚠️' : ' ✓') + '</div></div></div>' +
     '<button class="stat link" data-act="shop"><div class="k">ZUM ANZEIGEN TIPPEN ↗</div><div class="v2">Einkauf</div><div class="s">' + done + '/' + sh.rows.length + ' Artikel gekauft</div></button></div>' +
     (over ? '<p class="note warn">Dieser Plan ist ' + eur(total - S.budget) + ' zu teuer. Probiere weniger Tage, weniger Mahlzeiten oder ein höheres Budget.</p>' : '') +
     few +
@@ -352,6 +366,11 @@ function shopView(){
     '<div class="bar tot"><span>Einkauf gesamt</span><b>' + eur(sh.total) + '</b></div></div>';
 }
 
+function savedView(){
+  const list = SAVED.length ? SAVED.map(it => '<article class="svd"><div><h3>' + esc(it.name) + '</h3><p>' + STORES[it.snap.store] + ' · ' + it.snap.dset.length + (it.snap.dset.length === 1 ? ' Tag' : ' Tage') + ' · ' + it.snap.persons + ' Pers. · ' + eur(it.total) + '</p></div>' +
+    '<div class="sb"><button class="btn sm" data-act="gopen" data-id="' + it.id + '">Öffnen</button><button class="btn ghost sm" data-act="gdel" data-id="' + it.id + '" aria-label="Löschen">🗑</button></div></article>').join('') : '<p class="note ctr">Noch nichts gespeichert. Tippe beim Plan auf "Plan speichern".</p>';
+  return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Gespeichert</div><span class="ib ghost"></span></header><main class="main"><h1 class="h1">Gespeicherte Pläne</h1>' + list + '</main></div>';
+}
 /* ---------- Routen ---------- */
 function route(){ return (location.hash || '').replace(/^#\/?/, '').split('/'); }
 function go(h, replace){ if (replace) location.replace(h); else location.hash = h; }
@@ -364,6 +383,8 @@ function render(keepScroll){
   } else if (a === 'laden') {
     html = loadingView();
     loadTimer = setTimeout(() => { showFresh = true; go('#/plan', true); }, 3200);
+  } else if (a === 'gespeichert') {
+    html = savedView();
   } else if (P && a === 'einkauf') {
     html = shopView();
   } else if (P && a === 'rezept') {
@@ -421,8 +442,9 @@ document.addEventListener('click', e => {
   if (act === 'blk') {
     const id = el.dataset.id, k = S.blocked.indexOf(id);
     if (k >= 0) S.blocked.splice(k, 1); else S.blocked.push(id);
-    save(); el.classList.toggle('on'); el.setAttribute('aria-pressed', String(k < 0)); const nt = document.querySelector('#blk > .note'); if (nt) nt.textContent = S.blocked.length + (S.blocked.length === 1 ? ' Zutat' : ' Zutaten') + ' blockiert'; return;
+    save(); el.classList.toggle('on'); el.setAttribute('aria-pressed', String(k < 0)); const bb = document.querySelector('.bar .btn'); if (bb) bb.textContent = S.blocked.length ? 'Plan erstellen' : 'Ich esse alles'; const nt = document.querySelector('#blk > .note'); if (nt) nt.textContent = S.blocked.length + (S.blocked.length === 1 ? ' Zutat' : ' Zutaten') + ' blockiert'; return;
   }
+  if (act === 'alg') { const k = S.blocked.indexOf(el.dataset.id); if (k >= 0) S.blocked.splice(k, 1); else S.blocked.push(el.dataset.id); save(); render(true); return; }
   if (act === 'bcat') { blkCat = el.dataset.v; const q = $('#q'); if (q) q.value = ''; $('#blk').innerHTML = blkGrid(''); return; }
   if (act === 'restart') { go('#/start/0'); return; }
   if (act === 'shop') { go('#/einkauf'); return; }
@@ -432,7 +454,14 @@ document.addEventListener('click', e => {
     if (P.slots.every(s => s.pin)) { toast('Alle Gerichte sind angeheftet.'); return; }
     generate(); render(true); toast('Neuer Vorschlag'); return;
   }
-  if (act === 'saveplan') { save(); toast('Plan gespeichert'); return; }
+  if (act === 'saveplan') {
+    save(); const t0 = dayDate(0);
+    SAVED.unshift({id:String(Date.now()), name:'Woche ab ' + t0.getDate() + '.' + (t0.getMonth() + 1) + '.', total:planTotal(), snap:{store:S.store, budget:S.budget, persons:S.persons, dset:S.dset.slice(), meals:S.meals}, plan:JSON.parse(JSON.stringify(P))});
+    SAVED = SAVED.slice(0, 20); LS.set('sp-saved', SAVED); toast('Plan gespeichert ♡'); return;
+  }
+  if (act === 'gesp') { go('#/gespeichert'); return; }
+  if (act === 'gopen') { const it = SAVED.find(x => x.id === el.dataset.id); if (it) { Object.assign(S, it.snap); S.days = S.dset.length; P = JSON.parse(JSON.stringify(it.plan)); save(); go('#/plan'); } return; }
+  if (act === 'gdel') { SAVED = SAVED.filter(x => x.id !== el.dataset.id); LS.set('sp-saved', SAVED); render(true); return; }
   if (act === 'swap') { if (swap(i)) { toast('Gericht getauscht'); render(true); } return; }
   if (act === 'portion') { portionsView = Math.min(12, Math.max(1, (portionsView || S.persons) + parseInt(el.dataset.d, 10))); render(true); return; }
   if (act === 'cook') { go('#/kochen/' + i + '/0'); return; }
