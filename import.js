@@ -47,13 +47,13 @@ function toAmount(key, q, unit){
   const g = ING[key];
   if (q == null) q = 1;
   if (g.u === 'g') {
-    if (unit === 'g') return q; if (unit === 'kg') return q * 1000; if (unit === 'el') return q * 15; if (unit === 'tl') return q * 5;
+    if (unit === 'g') return q; if (unit === 'kg') return q * 1000; if (unit === 'ml') return q; if (unit === 'l') return q * 1000; if (unit === 'el') return q * 15; if (unit === 'tl') return q * 5;
     if (unit === 'pck') return q * Math.min(g.pack, 500);
     if (unit === 'dose') return q * (CAN[key] || 400);
     return q * (PIECE[key] || 150);
   }
   if (g.u === 'ml') {
-    if (unit === 'ml') return q; if (unit === 'l') return q * 1000; if (unit === 'cl') return q * 10; if (unit === 'el') return q * 15; if (unit === 'tl') return q * 5;
+    if (unit === 'g') return q; if (unit === 'kg') return q * 1000; if (unit === 'ml') return q; if (unit === 'l') return q * 1000; if (unit === 'cl') return q * 10; if (unit === 'el') return q * 15; if (unit === 'tl') return q * 5;
     if (unit === 'becher') return q * 200; if (unit === 'tasse') return q * 250; if (unit === 'pck') return q * 200;
     return q * 100;
   }

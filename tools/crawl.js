@@ -50,6 +50,7 @@ function convert(d){
   try { rec = buildRecipe({name: d.title, ingredients: lines, steps, minutes: mins, yield: yieldN, image: '', source: 'Chefkoch'}, 'https://www.chefkoch.de/rezepte/' + d.id + '/'); } catch (e) { return null; }
   const txt = norm(lines.join(' | ').replace(/kokos\w*milch|hafermilch|sojamilch|mandelmilch/gi, ' ') + ' ' + d.title);
   const fl = (MEAT.test(txt) ? 'm' : '') + (FISH.test(txt) ? 'f' : '') + (DAIRY.test(txt) ? 'd' : '') + (EGG.test(txt) ? 'e' : '') + (GLUTEN.test(txt) ? 'g' : '');
+  rec.z = rec.z.map(([k, a]) => { const u = ctx.X.ING[k] ? ctx.X.ING[k].u : 'Stück'; const cap = (u === 'g' || u === 'ml') ? 600 : 4; return [k, Math.min(cap, a)]; });
   const cn = {};
   for (const k in rec.defs) cn[k] = rec.defs[k].name;
   const t = [], nt = norm(d.title + ' ' + lines.join(' '));
