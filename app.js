@@ -6,15 +6,20 @@ const $ = (s, r = document) => r.querySelector(s);
 const eur = n => n.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
 const num = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const STORES = ['Aldi', 'Penny', 'Edeka'];
+const STORES = ['Aldi', 'Penny', 'Edeka', 'Lidl', 'Rewe', 'Netto', 'Kaufland', 'Norma'];
+/* Preise der neuen Läden: abgeleitet von Aldi/Penny/Edeka (Laden, Faktor) – grobe Schätzung, im Einkauf anpassbar */
+const PBASE = [[0,1],[1,1],[2,1],[0,1],[2,1.03],[1,0.98],[1,1.02],[0,1.02]];
+const WD = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
 const STEPS = 8;
 const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
 
-let S = Object.assign({store:0, budget:50, persons:2, days:3, meals:1, wishes:[], diet:null, gluten:false, lactose:false,
+let S = Object.assign({store:0, budget:50, persons:2, days:3, dset:[0,1,2], meals:1, wishes:[], diet:null, gluten:false, lactose:false,
   dev:{herd:true, ofen:false, heissluft:false, mikrowelle:false}, blocked:[]}, LS.get('sp-settings', {}));
+if (!Array.isArray(S.dset) || !S.dset.length) S.dset = [0,1,2];
+S.days = S.dset.length;
 let P = LS.get('sp-plan', null);
 let CP = LS.get('sp-preise', {});
 let THUMBS = LS.get('sp-thumbs', {});
@@ -25,7 +30,7 @@ let loadTimer = null;
 const save = () => { LS.set('sp-settings', S); LS.set('sp-plan', P); LS.set('sp-preise', CP); };
 
 /* ---------- Preise und Kosten ---------- */
-function price(i){ const c = CP[S.store] && CP[S.store][i]; return (c != null) ? c : ING[i].p[S.store]; }
+function price(i){ const c = CP[S.store] && CP[S.store][i]; if (c != null) return c; const b = PBASE[S.store] || PBASE[0]; return Math.round(ING[i].p[b[0]] * b[1] * 100) / 100; }
 function fmt(a, u){
   if (u === 'g') return a >= 1000 ? num(a / 1000) + ' kg' : Math.round(a) + ' g';
   if (u === 'ml') return a >= 1000 ? num(a / 1000) + ' l' : Math.round(a) + ' ml';
@@ -190,12 +195,7 @@ function confetti(){
   document.body.appendChild(box);
   setTimeout(() => box.remove(), 3200);
 }
-function dayLabel(d){
-  if (d === 0) return 'Heute';
-  if (d === 1) return 'Morgen';
-  const dt = new Date(); dt.setDate(dt.getDate() + d);
-  return dt.toLocaleDateString('de-DE', {weekday:'long'});
-}
+function dayLabel(d){ return WD[S.dset[d]] || ('Tag ' + (d + 1)); }
 const mealLabel = i => S.meals === 1 ? 'Warme Mahlzeit' : (i % 2 === 0 ? 'Mittagessen' : 'Abendessen');
 const planTotal = () => shop(P.slots.map(s => s.r)).total;
 
@@ -213,7 +213,7 @@ function stepView(n){
     return shell(0, 'Wo kaufst du ein?', 'Die Preise passen wir an den Laden an.',
       '<div class="tiles3">' + STORES.map((s, i) =>
         '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '"><span>' + s + '</span></button>').join('') + '</div>' +
-      '<p class="note">Weitere Läden kommen später dazu.</p>');
+      '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>');
   }
   if (n === 1) {
     return shell(1, 'Wie hoch ist dein Budget?', 'Stelle den Betrag ein, den du gerne ausgeben möchtest.',
@@ -228,9 +228,10 @@ function stepView(n){
       '<div class="stepper"><button data-act="stp" data-k="persons" data-d="-1" aria-label="Eine Person weniger">−</button><output>' + S.persons + '</output><button data-act="stp" data-k="persons" data-d="1" aria-label="Eine Person mehr">+</button></div>');
   }
   if (n === 3) {
-    return shell(3, 'Für wie viele Tage planst du?', 'Und wie viele warme Mahlzeiten gibt es pro Tag?',
-      '<div class="stepper"><button data-act="stp" data-k="days" data-d="-1" aria-label="Einen Tag weniger">−</button><output>' + S.days + '</output><button data-act="stp" data-k="days" data-d="1" aria-label="Einen Tag mehr">+</button></div>' +
-      '<div class="cap c2">' + (S.days === 1 ? 'Tag' : 'Tage') + '</div>' +
+    return shell(3, 'Für wie viele Tage planst du?', 'Tippe die Tage an, an denen du kochst. Und wie viele warme Mahlzeiten gibt es pro Tag?',
+      '<div class="qk">' + [['Mo–Fr','0,1,2,3,4'],['Ganze Woche','0,1,2,3,4,5,6'],['Wochenende','5,6']].map(q => '<button data-act="dquick" data-v="' + q[1] + '">' + q[0] + '</button>').join('') + '</div>' +
+      '<div class="wdays">' + WD.map((n, k) => '<button data-act="dtog" data-v="' + k + '" aria-pressed="' + S.dset.includes(k) + '"><span>' + n.slice(0, 2) + '</span><small>' + n + '</small></button>').join('') + '</div>' +
+      '<div class="cap c2">' + S.days + (S.days === 1 ? ' Tag' : ' Tage') + ' gewählt</div>' +
       '<div class="seg" role="group" aria-label="Warme Mahlzeiten pro Tag">' +
       [1, 2].map(m => '<button data-act="meals" data-v="' + m + '" aria-pressed="' + (S.meals === m) + '">' + m + (m === 1 ? ' warme Mahlzeit' : ' warme Mahlzeiten') + '</button>').join('') + '</div>');
   }
@@ -392,6 +393,12 @@ document.addEventListener('click', e => {
     const k = el.dataset.k, lim = {persons:[1, 10], days:[1, 7]}[k];
     S[k] = Math.min(lim[1], Math.max(lim[0], S[k] + parseInt(el.dataset.d, 10))); save(); render(true); return;
   }
+  if (act === 'dtog') {
+    const k = parseInt(el.dataset.v, 10), x = S.dset.indexOf(k);
+    if (x >= 0) { if (S.dset.length > 1) S.dset.splice(x, 1); else toast('Mindestens ein Tag.'); } else S.dset.push(k);
+    S.dset.sort((a, b) => a - b); S.days = S.dset.length; save(); render(true); return;
+  }
+  if (act === 'dquick') { S.dset = el.dataset.v.split(',').map(Number); S.days = S.dset.length; save(); render(true); return; }
   if (act === 'meals') { S.meals = parseInt(el.dataset.v, 10); save(); render(true); return; }
   if (act === 'wish') {
     const id = el.dataset.id, k = S.wishes.indexOf(id);

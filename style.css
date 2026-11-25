@@ -47,7 +47,7 @@ a{color:inherit}
 .tiles3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .tile{position:relative;aspect-ratio:1/1.1;border-radius:20px;border:2px solid transparent;background:var(--card);box-shadow:0 1px 6px #0001;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:18px}
 .tile::before{content:"";position:absolute;inset:0 0 auto 0;height:14px;background:var(--c)}
-.tile.s0{--c:#1b4f9c}.tile.s1{--c:#cd1719}.tile.s2{--c:#f6c600}
+.tile.s0{--c:#1b4f9c}.tile.s1{--c:#cd1719}.tile.s2{--c:#f6c600}.tile.s3{--c:#0050aa}.tile.s4{--c:#b3001b}.tile.s5{--c:#f7a800}.tile.s6{--c:#e10915}.tile.s7{--c:#00a0e1}
 .tile.on{border-color:var(--ink)}
 .tile.on::after,.card2.on::after,.ing.on::after{content:"✓";position:absolute;right:8px;top:18px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:14px;display:grid;place-items:center}
 
@@ -176,3 +176,11 @@ a{color:inherit}
 .confetti i{position:absolute;top:-16px;width:9px;height:15px;border-radius:2px;animation:fall linear forwards}
 @keyframes fall{to{top:105%;opacity:.9}}
 @media (prefers-reduced-motion:reduce){.track{animation:none}.confetti{display:none}.prog i{transition:none}}
+
+.tiles3 .tile{aspect-ratio:1/0.9;font-weight:700}
+.qk{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 14px}
+.qk button{border:0;border-radius:999px;background:var(--soft);padding:10px 14px;font-weight:600;font-size:14px;color:var(--ink)}
+.wdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wdays button{border:2px solid transparent;border-radius:16px;background:var(--card);box-shadow:0 1px 6px #0001;min-height:64px;display:grid;place-items:center;font-weight:700;font-size:17px;color:var(--ink);padding:0}
+.wdays button small{display:none}
+.wdays button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
