@@ -12,6 +12,7 @@ const PBASE = [[0,1],[1,1],[2,1],[0,1],[2,1.03],[1,0.98],[1,1.02],[0,1.02]];
 const LOGOS = ['Aldi','Penny','Edeka','Lidl','Netto','Norma'];
 const WD = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
 const STEPS = 9;
+const API_BASE = /vercel\.app$/.test(location.hostname) ? '' : 'https://spar-speiseplan.vercel.app';
 const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -26,6 +27,14 @@ S.days = S.dset.length;
 let P = LS.get('sp-plan', null);
 let CP = LS.get('sp-preise', {});
 let SAVED = LS.get('sp-saved', []);
+let OWN = LS.get('sp-eigene', []);
+function addOwn(r){
+  if (R[r.id]) return;
+  for (const k in (r.defs || {})) ING[k] = r.defs[k];
+  r.emo = ING[r.z[0][0]].e; r.tags = r.min <= 25 ? ['schnell'] : [];
+  RECIPES.push(r); R[r.id] = r;
+}
+OWN.forEach(addOwn);
 let THUMBS = LS.get('sp-thumbs', {});
 let portionsView = null;
 let showFresh = false;
@@ -63,6 +72,7 @@ function allowed(r){
   if (!r.ok.some(d => S.dev[d])) return false;
   const bk = blockedKeys();
   if (ids.some(i => bk.has(i) || S.blocked.includes(i))) return false;
+  if (r.own && ids.some(i => ING[i].custom && S.blocked.some(b => { const f = FOODS.find(x => x.id === b); return f && norm(ING[i].name).includes(norm(f.n.replace(/ \(.*\)/, ''))); }))) return false;
   const meat = ids.some(i => MEAT.has(i)), fish = ids.some(i => FISH.has(i));
   const dairy = ids.some(i => DAIRY.has(i)), egg = ids.includes('eier'), gl = ids.some(i => GLUTEN.has(i));
   if (S.diet === 'vegan' && (meat || fish || dairy || egg)) return false;
@@ -169,9 +179,9 @@ function loadThumbs(){
   return thumbsLoading;
 }
 function ph(rid, size, cls){
-  const r = R[rid], u = THUMBS[r.mid];
+  const r = R[rid], u = r.img || THUMBS[r.mid];
   return '<div class="ph ' + (cls || '') + '" data-e="' + r.emo + '">' +
-    (u ? '<img src="' + u + '/' + size + '" data-full="' + u + '" alt="' + esc(r.n) + '" loading="lazy">' : '') + '</div>';
+    (u ? '<img src="' + u + (r.img ? '' : '/' + size) + '" data-full="' + u + '" alt="' + esc(r.n) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '</div>';
 }
 document.addEventListener('error', e => {
   const t = e.target;
@@ -220,6 +230,7 @@ function stepView(n){
       '<div class="tiles3">' + STORES.map((s, i) =>
         '<button class="tile store s' + i + (S.store === i ? ' on' : '') + '" data-act="store" data-v="' + i + '" aria-pressed="' + (S.store === i) + '">' + (LOGOS.includes(s) ? '<img src="logos/' + s.toLowerCase() + '.png" alt="' + s + '"><span class="sn">' + s + '</span>' : '<span>' + s + '</span>') + '</button>').join('') + '</div>' +
       '<p class="note">Die Preise sind Schätzungen und lassen sich im Einkauf anpassen.</p>' +
+      '<button class="btn ghost wide" data-act="imp">＋ Rezept per Link importieren' + (OWN.length ? ' (' + OWN.length + ')' : '') + '</button>' +
       (SAVED.length ? '<button class="btn ghost wide" data-act="gesp">♡ Gespeicherte Pläne (' + SAVED.length + ')</button>' : ''));
   }
   if (n === 1) {
@@ -336,9 +347,10 @@ function recipeView(i){
     '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button></div>' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
-    '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u) + '</span></li>').join('') + '</ul>' +
+    (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(t) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + r.yield + ' Portionen, wie auf der Originalseite.</p>' : '') +
+    (r.own ? '' : '<ul class="zl">' + r.z.map(([id, a]) => '<li><span class="ie">' + ING[id].e + '</span><span class="zn">' + esc(ING[id].name) + '</span><span class="za">' + fmt(a * pn, ING[id].u) + '</span></li>').join('') + '</ul>') +
     '<p class="note">Salz, Pfeffer und Gewürze hast du hoffentlich zu Hause.</p>' +
-    '<h2 class="h2">Zubereitung</h2><ol class="steps">' + r.s.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' +
+    (r.own ? '<p class="note"><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Originalrezept bei ' + esc(r.source) + ' öffnen ↗</a></p>' : '') + '<h2 class="h2">Zubereitung</h2><ol class="steps">' + r.s.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' +
     '<p class="credit">Symbolfoto von <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>. Das Gericht kann anders aussehen.</p></main></div>';
 }
 function cookView(i, st){
@@ -355,7 +367,7 @@ function shopView(){
     const rows = sh.rows.filter(x => ING[x.i].area === a); if (!rows.length) return '';
     return '<section class="grp"><h2 class="h2">' + a + '</h2>' + rows.map(x => {
       const g = ING[x.i];
-      return '<label class="row"><input type="checkbox" data-chk="' + x.i + '"' + (P.checked[x.i] ? ' checked' : '') + '><span class="ie">' + g.e + '</span><span class="rt"><b>' + esc(g.name) + '</b><span>Du brauchst ' + fmt(x.t, g.u) + ' · ' + x.packs + ' × ' + packTxt(g) + '</span></span><span class="rp">' + eur(x.cost) + '</span></label>';
+      return '<label class="row"><input type="checkbox" data-chk="' + x.i + '"' + (P.checked[x.i] ? ' checked' : '') + '><span class="ie">' + g.e + '</span><span class="rt"><b>' + esc(g.name) + '</b><span>' + (g.custom ? 'Nach Bedarf einkaufen (Preis geschätzt)' : x.loose ? 'Kaufe ca. ' + fmt(x.w, g.u) + ' (lose)' : 'Du brauchst ' + fmt(x.t, g.u) + ' · ' + x.packs + ' × ' + packTxt(g)) + '</span></span><span class="rp">' + eur(x.cost) + '</span></label>';
     }).join('') + '</section>';
   }).join('');
   const fold = '<details class="fold"><summary>Preise anpassen (' + STORES[S.store] + ')</summary><p class="note">Trage den Preis pro Packung ein, den du im Markt siehst.</p>' +
@@ -366,6 +378,14 @@ function shopView(){
     '<div class="bar tot"><span>Einkauf gesamt</span><b>' + eur(sh.total) + '</b></div></div>';
 }
 
+let impMsg = '';
+function importView(){
+  const list = OWN.length ? '<h2 class="h2">Deine Rezepte</h2>' + OWN.map(r => '<article class="svd"><div><h3>' + esc(r.n) + '</h3><p>' + esc(r.source) + ' · ' + r.min + ' Min.</p></div><div class="sb"><button class="btn ghost sm" data-act="odel" data-id="' + r.id + '" aria-label="Löschen">🗑</button></div></article>').join('') : '';
+  return '<div class="scr"><header class="top"><button class="ib" data-act="back" aria-label="Zurück">‹</button><div class="pill">Rezept importieren</div><span class="ib ghost"></span></header><main class="main"><h1 class="h1">Rezept per Link</h1>' +
+    '<p class="sub">Füge den Link zu einem Rezept ein, z. B. von Chefkoch. Die App liest Zutaten und Schritte aus und nimmt das Rezept in deine Pläne auf. Das ist für deinen eigenen Gebrauch gedacht. Bei TikTok und Instagram geht das nicht.</p>' +
+    '<label class="search"><span aria-hidden="true">🔗</span><input id="impurl" type="url" placeholder="Link einfügen…" autocomplete="off" inputmode="url"></label>' +
+    '<button class="btn wide" data-act="doimport">Importieren</button><p id="impmsg" class="note ctr">' + impMsg + '</p>' + list + '</main></div>';
+}
 function savedView(){
   const list = SAVED.length ? SAVED.map(it => '<article class="svd"><div><h3>' + esc(it.name) + '</h3><p>' + STORES[it.snap.store] + ' · ' + it.snap.dset.length + (it.snap.dset.length === 1 ? ' Tag' : ' Tage') + ' · ' + it.snap.persons + ' Pers. · ' + eur(it.total) + '</p></div>' +
     '<div class="sb"><button class="btn sm" data-act="gopen" data-id="' + it.id + '">Öffnen</button><button class="btn ghost sm" data-act="gdel" data-id="' + it.id + '" aria-label="Löschen">🗑</button></div></article>').join('') : '<p class="note ctr">Noch nichts gespeichert. Tippe beim Plan auf "Plan speichern".</p>';
@@ -383,6 +403,8 @@ function render(keepScroll){
   } else if (a === 'laden') {
     html = loadingView();
     loadTimer = setTimeout(() => { showFresh = true; go('#/plan', true); }, 3200);
+  } else if (a === 'import') {
+    html = importView();
   } else if (a === 'gespeichert') {
     html = savedView();
   } else if (P && a === 'einkauf') {
@@ -460,6 +482,18 @@ document.addEventListener('click', e => {
     SAVED = SAVED.slice(0, 20); LS.set('sp-saved', SAVED); toast('Plan gespeichert ♡'); return;
   }
   if (act === 'gesp') { go('#/gespeichert'); return; }
+  if (act === 'imp') { impMsg = ''; go('#/import'); return; }
+  if (act === 'odel') { OWN = OWN.filter(r => r.id !== el.dataset.id); LS.set('sp-eigene', OWN); const k = RECIPES.findIndex(r => r.id === el.dataset.id); if (k >= 0) RECIPES.splice(k, 1); delete R[el.dataset.id]; render(true); return; }
+  if (act === 'doimport') {
+    const inp = $('#impurl'), msg = $('#impmsg'), u = (inp.value || '').trim();
+    if (!/^https?:\/\//i.test(u)) { msg.textContent = 'Bitte einen Link einfügen, der mit https:// beginnt.'; return; }
+    if (/tiktok|instagram/i.test(u)) { msg.textContent = 'Bei TikTok und Instagram steht kein Rezept im Link. Suche das Rezept auf einer Rezeptseite wie Chefkoch.'; return; }
+    el.disabled = true; msg.textContent = 'Lese das Rezept…';
+    fetch(API_BASE + '/api/import?url=' + encodeURIComponent(u)).then(r => r.json().then(j => { if (!r.ok) throw new Error(j.error || 'Fehler'); return j; }))
+      .then(j => { const rec = buildRecipe(j, u); OWN.push(rec); LS.set('sp-eigene', OWN); addOwn(rec); impMsg = '✓ "' + rec.n + '" ist jetzt dabei.'; render(true); })
+      .catch(e => { msg.textContent = 'Das hat nicht geklappt: ' + e.message; el.disabled = false; });
+    return;
+  }
   if (act === 'gopen') { const it = SAVED.find(x => x.id === el.dataset.id); if (it) { Object.assign(S, it.snap); S.days = S.dset.length; P = JSON.parse(JSON.stringify(it.plan)); save(); go('#/plan'); } return; }
   if (act === 'gdel') { SAVED = SAVED.filter(x => x.id !== el.dataset.id); LS.set('sp-saved', SAVED); render(true); return; }
   if (act === 'swap') { if (swap(i)) { toast('Gericht getauscht'); render(true); } return; }
