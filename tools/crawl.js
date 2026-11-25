@@ -39,7 +39,7 @@ async function pool(items, n, fn){
         if (!r || !r.id || cand.has(r.id)) continue;
         const rt = r.rating || {};
         if (rt.numVotes != null && (rt.numVotes < 8 || rt.rating < 3.8)) continue;
-        if (BAD.test(r.title || '')) continue;
+        if (CK_BAD.test(r.title || '')) continue;
         cand.set(r.id, {id: r.id, score: (rt.rating || 4) * Math.log(2 + (rt.numVotes || 1))});
       }
       await sleep(120);
