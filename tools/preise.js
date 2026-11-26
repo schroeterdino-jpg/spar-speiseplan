@@ -18,7 +18,9 @@ async function search(q){
   return [];
 }
 const BADNAME = /\bbio\b|premium|vegan|veggie|plant|fertig|menü|menu|mix\b|snack|baby|kinder|light|laktosefrei|demeter|regional|marken|gourmet|delikatess/i;
-const q25 = a => { a = a.slice().sort((x, y) => x - y); return a[Math.floor((a.length - 1) * 0.5)]; }; /* Mittelwert (Median) der normalen Produkte */
+const MEAT = new Set(['hack','haehnchen','keulen','schwein','rind','wurst','speck','lachs','seelachs','fischst','garnelen']);
+let CUR = '';
+const q25 = a => { a = a.slice().sort((x, y) => x - y); return a[Math.floor((a.length - 1) * (MEAT.has(CUR) ? 0.5 : 0.25))]; }; /* Fleisch: Median, sonst unteres Viertel (günstige Eigenmarken) */
 function cands(products, key, name){
   const w = name.toLowerCase().replace(/[^a-zäöüß ]/g, '').split(' ')[0];
   const out = [];
@@ -51,12 +53,12 @@ function newPrice(a, c){ /* Euro pro Packung (Rewe) oder null */
 (async () => {
   const report = [], upd = {};
   for (const k of Object.keys(RAW)) {
-    const a = RAW[k], q = QUERY[k] || a[0];
+    const a = RAW[k], q = QUERY[k] || a[0]; CUR = k;
     const c = cands(await search(q), k, a[0]);
     const np = newPrice(a, c);
     const oldRewe = a[6][2] * 1.03;
     if (np == null || !(np > 0)) { report.push(k + ': kein Treffer'); await sleep(250); continue; }
-    if (np < oldRewe * 0.7 || np > oldRewe * 1.7) { report.push(k + ': unplausibel ' + np.toFixed(2) + ' (alt ' + oldRewe.toFixed(2) + ') uebersprungen'); await sleep(250); continue; }
+    if (np < oldRewe * 0.75 || np > oldRewe * 1.6) { report.push(k + ': unplausibel ' + np.toFixed(2) + ' (alt ' + oldRewe.toFixed(2) + ') uebersprungen'); await sleep(250); continue; }
     const f = np / 1.03 / a[6][2];
     upd[k] = a[6].map(x => Math.round(x * f * 100) / 100);
     report.push(k + ': ' + oldRewe.toFixed(2) + ' -> ' + np.toFixed(2) + ' (' + c.length + ' Treffer)');
