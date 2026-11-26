@@ -6,14 +6,10 @@ jobs:
     steps:
       - run: |
           UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'
-          curl -sL -m 30 -A "$UA" 'https://www.rewe.de/shop/api/products?search=hackfleisch%20gemischt&objectsPerPage=6&page=1' > r.json
-          node -e '
-          const j=JSON.parse(require("fs").readFileSync("r.json","utf8"));
-          const k=Object.keys(j);console.log("keys",k.join(","));
-          const items=(j._embedded&&j._embedded.products)||[];
-          console.log("n",items.length);
-          const o=items.slice(0,6).map(p=>JSON.stringify({n:p.productName,id:p.id,l:p._embedded&&p._embedded.listing&&{p:p._embedded.listing.pricing,g:p._embedded.listing.pricing&&p._embedded.listing.pricing.grammage,t:p._embedded.listing.pricing&&p._embedded.listing.pricing.basePrice}}));
-          console.log(o.join("\n"));
-          console.log(JSON.stringify(items[1]._embedded.articles).slice(0,1800));
-          ' > out.txt 2>&1
-          echo "::notice title=probe::$(tr '\n' '|' < out.txt | head -c 3500)"
+          B='https://www.rewe.de/shop/api/products?search=hackfleisch%20gemischt&objectsPerPage=6&page=1'
+          # Marktsuche
+          curl -sL -m 30 -A "$UA" 'https://www.rewe.de/shop/api/marketsearch?query=21493' > m.json; echo "markets: $(head -c 700 m.json)"
+          try(){ curl -sL -m 30 -A "$UA" "$@" > t.json; node -e 'try{const j=JSON.parse(require("fs").readFileSync("t.json","utf8"));const it=(j._embedded&&j._embedded.products)||[];const a=it.map(p=>(p._embedded.articles||[]).length);console.log("articles per product",a.join(","));const x=it.find(p=>(p._embedded.articles||[]).length);if(x)console.log(JSON.stringify(x._embedded.articles[0]).slice(0,900))}catch(e){console.log("ERR",e.message)}'; }
+          echo "A: $(try "$B&market=240237")"
+          echo "B: $(try "$B&marketId=240237")"
+          echo "C: $(try -H 'Cookie: marketsCookie=%7B%22online%22%3A%7B%22wwIdent%22%3A%22240237%22%2C%22marketZipCode%22%3A%2221493%22%2C%22serviceTypes%22%3A%5B%22PICKUP%22%5D%2C%22customerZipCode%22%3A%2221493%22%7D%7D' "$B")"
