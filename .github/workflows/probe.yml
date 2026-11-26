@@ -1,0 +1,12 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'
+          for u in 'https://shop.rewe.de/api/products?search=hackfleisch&objectsPerPage=5&page=1' 'https://www.rewe.de/shop/api/products?search=hackfleisch&objectsPerPage=5&page=1' 'https://shop.rewe.de/productList?search=hackfleisch'; do
+            r=$(curl -sL -m 30 -A "$UA" -H 'Accept: application/json, text/html' -w ' HTTP%{http_code}' "$u" | tr '\n' ' ' | head -c 600)
+            echo "::notice title=probe::$u => $r"
+          done
