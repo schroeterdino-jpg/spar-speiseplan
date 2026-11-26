@@ -6,6 +6,9 @@ jobs:
     steps:
       - run: |
           UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'
-          for u in 'https://www.rewe.de/api/marketsearch?searchTerm=21493' 'https://www.rewe.de/api/marketselection/zipcodes/21493/services/pickup' 'https://www.rewe.de/api/marketsearch?query=21493' 'https://mobile-api.rewe.de/api/v3/all-offers?marketCode=240237' 'https://shop.rewe.de/api/marketsearch?searchTerm=21493'; do
-            echo "URL $u => $(curl -sL -m 30 -A "$UA" -w ' HTTP%{http_code}' "$u" | head -c 500)"
-          done
+          B='https://www.rewe.de/shop/api/products?search=hackfleisch%20gemischt&objectsPerPage=6&page=1'
+          C='%7B%22online%22%3A%7B%22wwIdent%22%3A%22565120%22%2C%22marketZipCode%22%3A%2221521%22%2C%22serviceTypes%22%3A%5B%22PICKUP%22%5D%2C%22customerZipCode%22%3A%2221493%22%7D%2C%22stationary%22%3A%7B%22wwIdent%22%3A%22565120%22%2C%22marketZipCode%22%3A%2221521%22%7D%7D'
+          curl -sL -m 30 -A "$UA" -H "Cookie: marketsCookie=$C" "$B" > t.json
+          node -e 'const j=JSON.parse(require("fs").readFileSync("t.json","utf8"));const it=j._embedded.products;console.log("articles",it.map(p=>(p._embedded.articles||[]).length).join(","));const x=it.find(p=>(p._embedded.articles||[]).length);console.log(x?JSON.stringify(x._embedded.articles[0]).slice(0,1000):"none")' > o.txt 2>&1
+          echo "RES: $(tr '\n' ' ' < o.txt)"
+          curl -sL -m 30 -A "$UA" -D - -o /dev/null "https://www.rewe.de/shop/" | grep -i "set-cookie" | cut -c1-200
