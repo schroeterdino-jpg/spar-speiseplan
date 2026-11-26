@@ -5,7 +5,7 @@ const RAW = {
   nudeln:['Nudeln','g',500,null,'Vorrat','🍝',[0.79,0.85,0.99]],
   reis:['Reis','g',1000,null,'Vorrat','🍚',[1.99,2.09,2.39]],
   kartoffeln:['Kartoffeln','g',2500,null,'Obst & Gemüse','🥔',[3.29,3.49,3.99]],
-  hack:['Hackfleisch gemischt','g',500,null,'Fleisch & Fisch','🥩',[3.29,3.49,3.79]],
+  hack:['Hackfleisch gemischt','g',500,null,'Fleisch & Fisch','🥩',[5.19,5.49,5.99]],
   haehnchen:['Hähnchenbrust','g',500,null,'Fleisch & Fisch','🍗',[4.69,4.89,5.49]],
   keulen:['Hähnchenkeulen','g',1000,null,'Fleisch & Fisch','🍗',[3.99,4.19,4.69]],
   wurst:['Würstchen','g',400,null,'Fleisch & Fisch','🌭',[2.19,2.29,2.69]],
