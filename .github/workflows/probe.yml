@@ -6,10 +6,6 @@ jobs:
     steps:
       - run: |
           UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'
-          B='https://www.rewe.de/shop/api/products?search=hackfleisch%20gemischt&objectsPerPage=6&page=1'
-          # Marktsuche
-          curl -sL -m 30 -A "$UA" 'https://www.rewe.de/shop/api/marketsearch?query=21493' > m.json; echo "markets: $(head -c 700 m.json)"
-          try(){ curl -sL -m 30 -A "$UA" "$@" > t.json; node -e 'try{const j=JSON.parse(require("fs").readFileSync("t.json","utf8"));const it=(j._embedded&&j._embedded.products)||[];const a=it.map(p=>(p._embedded.articles||[]).length);console.log("articles per product",a.join(","));const x=it.find(p=>(p._embedded.articles||[]).length);if(x)console.log(JSON.stringify(x._embedded.articles[0]).slice(0,900))}catch(e){console.log("ERR",e.message)}'; }
-          echo "A: $(try "$B&market=240237")"
-          echo "B: $(try "$B&marketId=240237")"
-          echo "C: $(try -H 'Cookie: marketsCookie=%7B%22online%22%3A%7B%22wwIdent%22%3A%22240237%22%2C%22marketZipCode%22%3A%2221493%22%2C%22serviceTypes%22%3A%5B%22PICKUP%22%5D%2C%22customerZipCode%22%3A%2221493%22%7D%7D' "$B")"
+          for u in 'https://www.rewe.de/api/marketsearch?searchTerm=21493' 'https://www.rewe.de/api/marketselection/zipcodes/21493/services/pickup' 'https://www.rewe.de/api/marketsearch?query=21493' 'https://mobile-api.rewe.de/api/v3/all-offers?marketCode=240237' 'https://shop.rewe.de/api/marketsearch?searchTerm=21493'; do
+            echo "URL $u => $(curl -sL -m 30 -A "$UA" -w ' HTTP%{http_code}' "$u" | head -c 500)"
+          done
