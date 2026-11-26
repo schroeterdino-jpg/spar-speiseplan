@@ -12,7 +12,7 @@ const QUERY = {}; /* Suchbegriff abweichend vom Namen */
 async function search(q){
   const url = 'https://www.rewe.de/shop/api/products?serviceTypes=PICKUP&market=' + MARKET + '&objectsPerPage=40&page=1&search=' + encodeURIComponent(q);
   for (let t = 0; t < 3; t++) {
-    try { const r = await fetch(url, {headers: H}); if (r.ok) return ((await r.json())._embedded || {}).products || []; } catch (e) {}
+    try { const r = await fetch(url, {headers: H, signal: AbortSignal.timeout(20000)}); if (r.ok) return ((await r.json())._embedded || {}).products || []; } catch (e) {}
     await sleep(1500);
   }
   return [];
