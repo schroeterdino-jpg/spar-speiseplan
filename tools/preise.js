@@ -18,7 +18,7 @@ async function search(q){
   return [];
 }
 const BADNAME = /\bbio\b|premium|vegan|veggie|plant|fertig|menü|menu|mix\b|snack|baby|kinder|light|laktosefrei|demeter|regional|marken|gourmet|delikatess/i;
-const q25 = a => { a = a.slice().sort((x, y) => x - y); return a[Math.floor((a.length - 1) * 0.25)]; };
+const q25 = a => { a = a.slice().sort((x, y) => x - y); return a[Math.floor((a.length - 1) * 0.5)]; }; /* Mittelwert (Median) der normalen Produkte */
 function cands(products, key, name){
   const w = name.toLowerCase().replace(/[^a-zäöüß ]/g, '').split(' ')[0];
   const out = [];
@@ -56,7 +56,7 @@ function newPrice(a, c){ /* Euro pro Packung (Rewe) oder null */
     const np = newPrice(a, c);
     const oldRewe = a[6][2] * 1.03;
     if (np == null || !(np > 0)) { report.push(k + ': kein Treffer'); await sleep(250); continue; }
-    if (np < oldRewe * 0.45 || np > oldRewe * 2.6) { report.push(k + ': unplausibel ' + np.toFixed(2) + ' (alt ' + oldRewe.toFixed(2) + ') uebersprungen'); await sleep(250); continue; }
+    if (np < oldRewe * 0.7 || np > oldRewe * 1.7) { report.push(k + ': unplausibel ' + np.toFixed(2) + ' (alt ' + oldRewe.toFixed(2) + ') uebersprungen'); await sleep(250); continue; }
     const f = np / 1.03 / a[6][2];
     upd[k] = a[6].map(x => Math.round(x * f * 100) / 100);
     report.push(k + ': ' + oldRewe.toFixed(2) + ' -> ' + np.toFixed(2) + ' (' + c.length + ' Treffer)');
