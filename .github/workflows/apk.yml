@@ -20,6 +20,7 @@ jobs:
           cp index.html app.js daten.js foods.js import.js style.css www/
           cp rezepte.json www/ || true
           cp resources/icon.png www/icon.png
+          echo "{\"b\": ${{ github.run_number }}}" > www/version.json
           cp -r logos www/logos
       - name: Android-Projekt erzeugen
         run: |

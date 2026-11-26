@@ -612,3 +612,25 @@ $('#app').innerHTML = '<div class="scr center"><p class="sub ctr">Rezepte werden
 const DBP = fetch('rezepte.json').then(r => r.ok ? r.json() : []).then(l => { addDB(l); addDB(LIVE, true); }).catch(() => 0);
 Promise.race([DBP, new Promise(res => setTimeout(res, 15000))]).then(() => render(false));
 loadThumbs().then(got => { if (got) render(true); });
+
+// ---- Update-Hinweis (nur in der Android-App) ----
+(function () {
+  if (!window.Capacitor) return;
+  const mine = fetch('version.json').then(r => r.json()).then(j => +j.b).catch(() => 0);
+  setTimeout(() => {
+    mine.then(b => {
+      if (!b) return;
+      return fetch('https://api.github.com/repos/schroeterdino-jpg/spar-speiseplan/releases/tags/apk-latest')
+        .then(r => r.json()).then(j => {
+          const m = /Bau (\d+)/.exec(j.name || ''), a = (j.assets || [])[0];
+          if (!m || !a || +m[1] <= b) return;
+          const d = document.createElement('div');
+          d.className = 'upd';
+          d.innerHTML = '<span>Neue Version verfügbar</span><button>Aktualisieren</button><i aria-label="Schließen">×</i>';
+          d.querySelector('button').onclick = () => { location.href = a.browser_download_url; };
+          d.querySelector('i').onclick = () => d.remove();
+          document.body.appendChild(d);
+        });
+    }).catch(() => 0);
+  }, 2500);
+})();

@@ -226,3 +226,7 @@ a{color:inherit}
 .acts .fv{flex:none;width:54px;padding:0;font-size:22px;color:#e8553d}
 .hv{display:inline-block;margin:4px 0;padding:4px 10px;border-radius:999px;border:1px solid #ddd;background:#fff;font:inherit;font-size:12px;color:#555;cursor:pointer}
 .row .rt{min-width:0}
+.upd{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:99;display:flex;align-items:center;gap:10px;background:#1f1f1f;color:#fff;padding:12px 14px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:15px}
+.upd span{flex:1}
+.upd button{background:#E8553D;color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:600;font-size:15px}
+.upd i{font-style:normal;font-size:22px;padding:0 4px;opacity:.7}
