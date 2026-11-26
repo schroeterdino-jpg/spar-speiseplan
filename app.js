@@ -84,6 +84,13 @@ function shop(rids){
   rows.sort((a, b) => ING[a.i].name.localeCompare(ING[b.i].name, 'de'));
   return {rows, total: rows.reduce((s, x) => s + x.cost, 0)};
 }
+function buyCost(r, pn){
+  return r.z.reduce((s, [i, a]) => {
+    const g = ING[i], t = a * pn;
+    if (isLoose(i)) return s + Math.max(50, Math.ceil(t / 50 - 1e-9) * 50) / g.pack * price(i);
+    return s + Math.max(1, Math.ceil(t / g.pack - 1e-9)) * price(i);
+  }, 0);
+}
 const portionCost = r => r.z.reduce((s, [i, a]) => s + a * S.persons / ING[i].pack * price(i), 0);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
@@ -361,7 +368,9 @@ function planView(){
     '<div class="bar two"><button class="btn ghost" data-act="regen">↻ Alle neu generieren</button><button class="btn" data-act="saveplan">Plan speichern</button></div></div>';
 }
 function scaleLine(line, f){
-  const nf = v => { v = v * f; const r = v < 10 ? Math.round(v * 10) / 10 : Math.round(v); return String(r).replace('.', ','); };
+  const MASS = /^\s*(g|kg|mg|ml|l|cl|dl|el|tl|msp|prise|prisen|schuss|spritzer|tropfen|tasse|tassen|handvoll|liter|gramm|pfund|esslöffel|teelöffel)\b\.?/i;
+  const cnt = !MASS.test(line.replace(/^[\d\s.,\/\-–]+/, ''));
+  const nf = v => { v = v * f; const r = cnt ? Math.max(1, Math.ceil(v - 1e-9)) : (v < 10 ? Math.round(v * 10) / 10 : Math.round(v)); return String(r).replace('.', ','); };
   const num = x => parseFloat(String(x).replace(',', '.'));
   let m = /^(\d+)\s*\/\s*(\d+)(?!\d)/.exec(line);
   if (m) return nf(num(m[1]) / num(m[2])) + line.slice(m[0].length);
@@ -379,7 +388,7 @@ function recipeView(i, rid){
     '<button class="ib float" data-act="back" aria-label="Zurück">‹</button><button class="ib float r" data-act="' + (rid ? 'fav' : 'pin') + '" data-i="' + i + '" data-id="' + r.id + '" aria-label="' + (rid ? 'Favorit' : 'Anheften') + '">' + (rid ? (FAV.includes(r.id) ? '♥' : '♡') : (s.pin ? '🔒' : '🔓')) + '</button></div>' +
     '<main class="main"><h1 class="h1">' + esc(r.n) + '</h1>' + (rid && !allowed(r) ? '<p class="note warn">Achtung: Dieses Rezept passt nicht ganz zu deinen Einstellungen (Ernährung, Allergien, blockierte Zutaten oder Geräte).</p>' : '') +
     '<div class="chips">' + (rid ? '' : '<span class="chip">' + mealLabel(i) + '</span>') + r.tags.slice(0, 3).map(t => '<span class="chip alt">' + WISHES.find(w => w.id === t).n + '</span>').join('') + '</div>' +
-    '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(portionCost(r) / S.persons) + '</b><span>Anteil pro Portion</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
+    '<div class="meta"><div><b>⏱ ' + r.min + ' Min.</b><span>Zeit</span></div><div><b>' + eur(buyCost(r, pn) / pn) + '</b><span>Einkauf pro Portion (ganze Packungen)</span></div><div><b>' + devs + '</b><span>Gerät</span></div></div>' +
     '' + (rid ? '' : '<div class="acts"><button class="btn" data-act="cook" data-i="' + i + '">Kochen</button><button class="btn ghost" data-act="swap" data-i="' + i + '">Tauschen</button><button class="btn ghost fv" data-act="fav" data-id="' + r.id + '" aria-label="Favorit">' + (FAV.includes(r.id) ? '♥' : '♡') + '</button></div>') + '' +
     '<div class="zh"><h2 class="h2">Zutaten</h2><div class="stepper sm"><button data-act="portion" data-d="-1" aria-label="Eine Portion weniger">−</button><output>' + pn + '</output><button data-act="portion" data-d="1" aria-label="Eine Portion mehr">+</button><span class="pl">Portionen</span></div></div>' +
     (r.own ? '<ul class="zl">' + r.raw.map(t => '<li><span class="zn">' + esc(scaleLine(t, pn / r.yield)) + '</span></li>').join('') + '</ul><p class="note">Mengen für ' + pn + ' Portionen' + (pn === r.yield ? ', wie im Originalrezept.' : ', umgerechnet vom Original (' + r.yield + ' Portionen).') + '</p>' : '') +
