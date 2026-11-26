@@ -6,7 +6,14 @@ jobs:
     steps:
       - run: |
           UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'
-          for u in 'https://shop.rewe.de/api/products?search=hackfleisch&objectsPerPage=5&page=1' 'https://www.rewe.de/shop/api/products?search=hackfleisch&objectsPerPage=5&page=1' 'https://shop.rewe.de/productList?search=hackfleisch'; do
-            r=$(curl -sL -m 30 -A "$UA" -H 'Accept: application/json, text/html' -w ' HTTP%{http_code}' "$u" | tr '\n' ' ' | head -c 600)
-            echo "::notice title=probe::$u => $r"
-          done
+          curl -sL -m 30 -A "$UA" 'https://www.rewe.de/shop/api/products?search=hackfleisch%20gemischt&objectsPerPage=6&page=1' > r.json
+          node -e '
+          const j=JSON.parse(require("fs").readFileSync("r.json","utf8"));
+          const k=Object.keys(j);console.log("keys",k.join(","));
+          const items=(j._embedded&&j._embedded.products)||[];
+          console.log("n",items.length);
+          const o=items.slice(0,6).map(p=>JSON.stringify({n:p.productName,id:p.id,l:p._embedded&&p._embedded.listing&&{p:p._embedded.listing.pricing,g:p._embedded.listing.pricing&&p._embedded.listing.pricing.grammage,t:p._embedded.listing.pricing&&p._embedded.listing.pricing.basePrice}}));
+          console.log(o.join("\n"));
+          console.log(JSON.stringify(items[0]).slice(0,1500));
+          ' > out.txt 2>&1
+          echo "::notice title=probe::$(tr '\n' '|' < out.txt | head -c 3500)"
